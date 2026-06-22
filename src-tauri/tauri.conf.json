@@ -1,0 +1,86 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "OpenExpress",
+  "version": "0.1.0",
+  "identifier": "com.openexpress.desktop",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "OpenExpress",
+        "width": 1200,
+        "height": 800,
+        "minWidth": 900,
+        "minHeight": 600,
+        "resizable": true,
+        "fullscreen": false,
+        "center": true,
+        "skipTaskbar": true,
+        "decorations": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self' ipc: http://ipc.localhost; img-src 'self' asset: http://asset.localhost data: blob:; media-src 'self' asset: http://asset.localhost blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' ipc: http://ipc.localhost https://fonts.googleapis.com https://fonts.gstatic.com; script-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
+      "assetProtocol": {
+        "enable": true,
+        "scope": [
+          "$HOME/**",
+          "$DESKTOP/**",
+          "$DOCUMENT/**",
+          "$DOWNLOAD/**",
+          "$PICTURE/**",
+          "$VIDEO/**",
+          "$AUDIO/**",
+          "$APPDATA/**",
+          "$APPLOCALDATA/**",
+          "$TEMP/**",
+          "$RESOURCE/**"
+        ]
+      }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "publisher": "OpenExpress Contributors",
+    "copyright": "Copyright (c) 2026 OpenExpress Contributors",
+    "category": "Graphics and Design",
+    "shortDescription": "Open-source desktop quick-actions for image, video, and PDF.",
+    "longDescription": "OpenExpress is an offline-first, open-source alternative to Adobe Express. Resize, crop, convert, compress, trim, and convert media without a subscription or cloud round-trip.",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "fileAssociations": [
+      {
+        "ext": ["jpg", "jpeg", "png", "webp", "bmp", "tiff"],
+        "name": "Image",
+        "description": "Image file",
+        "role": "Editor"
+      },
+      {
+        "ext": ["mp4", "webm", "avi", "mov", "mkv"],
+        "name": "Video",
+        "description": "Video file",
+        "role": "Editor"
+      },
+      {
+        "ext": ["pdf"],
+        "name": "PDF",
+        "description": "PDF document",
+        "role": "Editor"
+      }
+    ],
+    "macOS": {
+      "infoPlist": "Info.plist"
+    }
+  }
+}

@@ -1,0 +1,294 @@
+@import "tailwindcss";
+
+/* ──────────────────────────────────────────────────────────────────────
+   genome 30 — structured_folio.swiss
+   cool gray field, Helvetica at scale, hairline rules, three muted
+   accents (gold / steel / terracotta). zero radius. zero shadows.
+   ──────────────────────────────────────────────────────────────────── */
+
+@theme {
+  /* Swiss color system. Existing token names are kept so utility classes
+     (bg-primary, text-image, etc.) flow through without per-page rewrites. */
+  --color-bg: #E8E9EB;            /* cool paper gray — the page field */
+  --color-bg-secondary: #FFFFFF;  /* white card surface */
+  --color-bg-tertiary: #DDDEE0;
+  --color-surface: #FFFFFF;
+  --color-surface-hover: #DDDEE0;
+
+  --color-border: #BFBFBF;         /* hairline rule */
+  --color-border-subtle: #D6D7D9;
+
+  --color-text: #111111;           /* ink — primary text */
+  --color-text-secondary: #666666; /* dim */
+  --color-text-muted: #888888;     /* ghost */
+
+  /* "primary" is structural ink in Swiss — buttons fill with it, text uses it. */
+  --color-primary: #111111;
+  --color-primary-hover: #000000;
+  --color-primary-light: #FFFFFF;
+  --color-primary-glow: transparent;
+
+  /* Swiss accents, mapped to status & category roles. */
+  --color-accent: #8DA3AD;         /* steel */
+  --color-accent-light: #E5EBED;
+  --color-accent-gold: #D6C66B;
+  --color-accent-steel: #8DA3AD;
+  --color-accent-signal: #A63A2E;  /* terracotta */
+  --color-accent-sage: #93A688;    /* sage — audio */
+
+  /* Ink colors readable on top of each accent fill. */
+  --color-ink-on-gold: #3A3520;
+  --color-ink-on-steel: #1F2A2E;
+  --color-ink-on-signal: #F2D4CE;
+  --color-ink-on-sage: #232B20;
+
+  /* Status: gold for success, ochre for warning, terracotta for danger,
+     steel for info. The -ink variants are darkened for readable text/icons
+     on light surfaces (the raw gold fails contrast at small sizes). */
+  --color-success: #D6C66B;
+  --color-success-light: #F4EFD4;
+  --color-success-ink: #7A6E2D;
+  --color-warning: #C08A3E;
+  --color-warning-light: #F2E4CC;
+  --color-danger: #A63A2E;
+  --color-danger-light: #F0D8D4;
+
+  /* Transparency checkerboard (image previews). */
+  --color-checker-bg: #FFFFFF;
+  --color-checker-fg: #E5E7EB;
+
+  /* Sidebar module — follows the theme: white panel on the gray field in
+     light mode, near-black module in dark mode. */
+  --color-sidebar-bg: #FFFFFF;
+  --color-sidebar-hover: rgba(0, 0, 0, 0.05);
+  --color-sidebar-text: #666666;
+  --color-sidebar-active: #111111;
+  --color-sidebar-border: #D6D7D9;
+
+  /* Category accents — image=gold, video=steel, pdf=terracotta, audio=sage. */
+  --color-image: #D6C66B;
+  --color-image-light: #F4EFD4;
+  --color-video: #8DA3AD;
+  --color-video-light: #E5EBED;
+  --color-pdf: #A63A2E;
+  --color-pdf-light: #F0D8D4;
+  --color-audio: #93A688;
+  --color-audio-light: #E6ECE2;
+
+  /* System fonts keep the app offline without bundled font packages. */
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Consolas, 'Courier New', monospace;
+
+  /* Zero-radius scale — every Tailwind rounded-* utility resolves to 0. */
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+  --radius-3xl: 0;
+}
+
+:root {
+  font-family: var(--font-sans);
+  line-height: 1.4;
+  font-weight: 400;
+  color-scheme: light;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'cv11' 1, 'ss01' 1, 'ss03' 1, 'kern' 1, 'liga' 1;
+}
+
+/* Display variant — big uppercase Swiss headers benefit from Inter Tight's
+   condensed proportions. Apply via .swiss-display or by setting font-family
+   inline. */
+h1, h2, .swiss-display {
+  font-family: var(--font-display);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-feature-settings: 'kern' 1, 'liga' 1;
+}
+
+#root { min-height: 100vh; }
+
+/* ── Scrollbar ──────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-border); }
+::-webkit-scrollbar-thumb:hover { background: var(--color-text-secondary); }
+
+/* ── Selection — muted gold per Swiss spec ──────────────────────────── */
+::selection {
+  background: var(--color-accent-gold);
+  color: var(--color-text);
+}
+
+/* ── Transitions — Swiss permits minimal opacity/bg fades only ──────── */
+*, *::before, *::after {
+  transition-property: color, background-color, border-color, opacity;
+  transition-timing-function: linear;
+  transition-duration: 100ms;
+}
+
+/* ── Focus — 1px ink outline, no glow ───────────────────────────────── */
+:focus-visible {
+  outline: 1px solid var(--color-text);
+  outline-offset: 2px;
+}
+
+/* ── Reduced motion — collapse transitions & animations ─────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Keyframes ──────────────────────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { opacity: 0.4; }
+  50%  { opacity: 1; }
+  100% { opacity: 0.4; }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes toast-countdown {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}
+
+/* ── Utilities ──────────────────────────────────────────────────────── */
+.animate-fade-in-up { animation: fade-in-up 0.2s linear both; }
+.animate-slide-in   { animation: slide-in-right 0.15s linear both; }
+
+/* The Swiss "card" — flat, hairline-bordered. Replaces surface-elevated. */
+.surface-elevated {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+
+/* Inverting tool card — flips to ink fill on hover. Children color via the
+   --card-* vars so the flip cascades without per-element hover classes. */
+.swiss-card {
+  --card-ink: var(--color-text);
+  --card-dim: var(--color-text-secondary);
+  --card-ghost: var(--color-text-muted);
+  --card-hairline: var(--color-border-subtle);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+}
+.swiss-card:hover {
+  background: var(--color-text);
+  border-color: var(--color-text);
+  --card-ink: var(--color-bg-secondary);
+  --card-dim: color-mix(in srgb, var(--color-bg-secondary) 72%, var(--color-text));
+  --card-ghost: color-mix(in srgb, var(--color-bg-secondary) 55%, var(--color-text));
+  --card-hairline: color-mix(in srgb, var(--color-bg-secondary) 30%, var(--color-text));
+}
+
+/* Outlined display numeral — Swiss skeleton typography. */
+.numeral-outline {
+  color: transparent;
+  -webkit-text-stroke: 1.5px var(--color-text);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 0.85;
+}
+
+/* Shared tool-page workspace: the outer frame owns the structure, so nested
+   legacy cards inside upload/preview/control slots flatten into one surface. */
+.tool-workspace .surface-elevated {
+  border: 0;
+  background: transparent;
+}
+
+.tool-workspace .tool-controls > .surface-elevated {
+  padding: 0;
+  height: 100%;
+}
+
+/* Uppercase micro-label — Swiss meta typography. */
+.swiss-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-secondary);
+}
+
+/* Link-style typographic button with trailing rotated arrow. */
+.swiss-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text);
+  font-weight: 700;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border: none;
+  background: transparent;
+  border-bottom: 1px solid var(--color-text);
+  padding: 4px 0 4px 0;
+  cursor: pointer;
+}
+.swiss-link::after {
+  content: "→";
+  display: inline-block;
+  transform: rotate(-45deg);
+  font-size: 14px;
+  line-height: 1;
+}
+.swiss-link:hover { opacity: 0.65; }
+.swiss-link:disabled { opacity: 0.25; pointer-events: none; }
+
+/* ── Dark mode — inverted Swiss (kept usable, not the default) ──────── */
+.dark {
+  color-scheme: dark;
+  --color-bg: #111111;
+  --color-bg-secondary: #1A1A1A;
+  --color-bg-tertiary: #222222;
+  --color-surface: #1A1A1A;
+  --color-surface-hover: #222222;
+  --color-border: #3A3A3A;
+  --color-border-subtle: #2A2A2A;
+  --color-text: #E8E9EB;
+  --color-text-secondary: #888888;
+  --color-text-muted: #555555;
+  --color-primary: #FFFFFF;
+  --color-primary-hover: #E8E9EB;
+  --color-primary-light: #1A1A1A;
+  --color-accent-light: #1F2528;
+  --color-success-light: #2A2820;
+  --color-success-ink: #D6C66B;
+  --color-warning-light: #2A2113;
+  --color-danger-light: #2A1A18;
+  --color-checker-bg: #1A1A1A;
+  --color-checker-fg: #2A2A2A;
+  --color-sidebar-bg: #000000;
+  --color-sidebar-hover: rgba(255, 255, 255, 0.06);
+  --color-sidebar-text: #888888;
+  --color-sidebar-active: #FFFFFF;
+  --color-sidebar-border: rgba(255, 255, 255, 0.12);
+  --color-image-light: #2A2820;
+  --color-video-light: #1F2528;
+  --color-pdf-light: #2A1A18;
+  --color-audio-light: #212620;
+}

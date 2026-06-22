@@ -1,0 +1,58 @@
+[package]
+name = "openexpress"
+version = "0.1.0"
+description = "Open-source desktop app replacing Adobe Express"
+authors = ["OpenExpress Contributors"]
+license = "MIT"
+repository = "https://github.com/oshtz/openexpress"
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+cc = "1"
+
+[dependencies]
+tauri = { version = "2", features = ["protocol-asset", "tray-icon"] }
+tauri-plugin-log = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-shell = "2"
+tauri-plugin-clipboard-manager = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+log = "0.4"
+image = { version = "0.25", features = ["jpeg", "png", "gif", "bmp", "tiff", "webp", "ico"] }
+lopdf = "0.34"
+tokio = { version = "1", features = ["full"] }
+tempfile = "3"
+ffmpeg-sidecar = "2"
+thiserror = "2"
+tauri-plugin-single-instance = "2"
+vtracer = "0.6"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "stream"] }
+futures-util = "0.3"
+sha2 = "0.10"
+semver = "1"
+plist = "1"
+zip = { version = "4.6.1", optional = true, default-features = false, features = ["deflate"] }
+# ML stack for local AI tools. Pulls in ONNX Runtime binaries (~200 MB).
+# It is enabled by default for app builds; developers can still opt out with
+# `--no-default-features` when they need a smaller non-AI build.
+ort = { version = "=2.0.0-rc.12", optional = true }
+ndarray = { version = "0.16", optional = true }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+winreg = "0.55"
+
+[features]
+default = ["bg-removal", "ai-upscale"]
+# All ML features share the same model-download infra. The `ml-common` group
+# is the union of crates needed by either bg-removal or ai-upscale; both
+# leaf features depend on it so enabling either pulls the full stack.
+ml-common = ["dep:ort", "dep:ndarray", "dep:zip"]
+bg-removal = ["ml-common"]
+ai-upscale = ["ml-common"]

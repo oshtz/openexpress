@@ -1,0 +1,21 @@
+# Keep text files consistent across Windows, macOS, Linux, and WSL.
+* text=auto eol=lf
+
+# Binary assets
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.icns binary
+*.webp binary
+*.mp4 binary
+*.mov binary
+*.mkv binary
+*.webm binary
+*.pdf binary
+
+# Windows launchers/installers, if added later
+*.exe binary
+*.msi binary
+*.dll binary
