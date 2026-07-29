@@ -43,7 +43,7 @@ Launch OpenExpress, pick a tool from Image, Video, PDF, or Audio, add files by d
 
 ## Requirements
 
-- **Node** >= 20.19.0 or >= 22.12.0
+- **Node** >= 20.19.0 or >= 22.13.0
 - **Rust** >= 1.77.2 (stable toolchain)
 - **Tauri prerequisites** for your platform: <https://tauri.app/start/prerequisites/>
 - **FFmpeg** — handled through `ffmpeg-sidecar` for media operations; first use may download/cache the sidecar depending on platform/build.
