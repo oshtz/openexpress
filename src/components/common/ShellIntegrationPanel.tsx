@@ -33,6 +33,7 @@ export function ShellIntegrationPanel() {
   }, [pushToast]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Sync initial state from the Tauri runtime.
     void refresh();
   }, [refresh]);
 
