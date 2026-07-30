@@ -1,3 +1,4 @@
+use crate::output::write_output;
 use crate::{AppError, AppResult};
 use image::imageops::FilterType;
 use serde::Serialize;
@@ -33,7 +34,10 @@ pub async fn resize_image(
     };
 
     let (final_w, final_h) = (resized.width(), resized.height());
-    resized.save(&output_path)?;
+    let output_path = write_output(output_path, |path| {
+        resized.save(path)?;
+        Ok(())
+    })?;
 
     let metadata =
         std::fs::metadata(&output_path).map_err(|e| AppError::from_io(e, &output_path))?;

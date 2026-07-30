@@ -50,7 +50,6 @@ export const TOOLS: readonly ToolSpec[] = [
   // PDF
   { id: "pdf-merge", label: "Merge", description: "Combine multiple PDFs", route: "/pdf/merge", category: "pdf", extensions: PDF_EXTS },
   { id: "pdf-compress", label: "Compress", description: "Reduce PDF size", route: "/pdf/compress", category: "pdf", extensions: PDF_EXTS },
-  { id: "pdf-to-image", label: "PDF to images", description: "Export pages", route: "/pdf/pdf-to-image", category: "pdf", extensions: PDF_EXTS },
   { id: "pdf-split", label: "Split", description: "Extract page range", route: "/pdf/split", category: "pdf", extensions: PDF_EXTS },
   { id: "pdf-organize", label: "Organize pages", description: "Reorder, delete, rotate", route: "/pdf/organize", category: "pdf", extensions: PDF_EXTS },
   // Cross-category: image → PDF

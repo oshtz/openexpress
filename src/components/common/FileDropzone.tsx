@@ -3,6 +3,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { FileText } from "lucide-react";
 import { pasteImageAsFile } from "../../lib/clipboard";
+import { allowAssetPaths } from "../../lib/assets";
 
 const RASTER_IMAGE_EXTS = ["jpg", "jpeg", "png", "webp", "bmp", "tif", "tiff", "gif"];
 
@@ -39,14 +40,19 @@ export function FileDropzone({
   const hasFile =
     label !== "Drop files here or click to browse" && !label.startsWith("Drop");
 
+  const deliverPaths = useCallback(async (paths: string[]) => {
+    await allowAssetPaths(paths).catch(() => {});
+    onFilesRef.current(paths);
+  }, []);
+
   const handleClick = useCallback(async () => {
     const filters = accept ? [{ name: "Accepted files", extensions: accept }] : [];
     const result = await open({ multiple, filters });
     if (result) {
       const paths = Array.isArray(result) ? result : [result];
-      onFiles(paths);
+      await deliverPaths(paths);
     }
-  }, [accept, multiple, onFiles]);
+  }, [accept, multiple, deliverPaths]);
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
@@ -81,7 +87,7 @@ export function FileDropzone({
           const filtered = payload.paths.filter(passesAccept);
           if (filtered.length === 0) return;
           const paths = multipleRef.current ? filtered : filtered.slice(0, 1);
-          onFilesRef.current(paths);
+          void deliverPaths(paths);
         }
       })
       .then((fn) => {
@@ -91,7 +97,7 @@ export function FileDropzone({
     return () => {
       unlisten?.();
     };
-  }, []);
+  }, [deliverPaths]);
 
   // Ctrl/Cmd+O opens the file dialog on the currently-mounted dropzone.
   useEffect(() => {
@@ -123,7 +129,7 @@ export function FileDropzone({
       if (target?.matches?.("input, textarea, [contenteditable=true]")) return;
       try {
         const path = await pasteImageAsFile();
-        onFilesRef.current([path]);
+        await deliverPaths([path]);
       } catch {
         // No image on clipboard, or user pasted text in a context that lets
         // text paste pass through. Either way: silent no-op.
@@ -131,7 +137,7 @@ export function FileDropzone({
     };
     window.addEventListener("paste", handler);
     return () => window.removeEventListener("paste", handler);
-  }, [acceptsImages]);
+  }, [acceptsImages, deliverPaths]);
 
   const borderColor = isDragging
     ? "var(--color-accent-gold)"

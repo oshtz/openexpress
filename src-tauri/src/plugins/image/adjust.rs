@@ -1,3 +1,4 @@
+use crate::output::write_output;
 use crate::{AppError, AppResult};
 use image::DynamicImage;
 use serde::Serialize;
@@ -31,7 +32,10 @@ pub async fn adjust_image(
     let img = image::open(&input_path)?;
 
     let adjusted = apply_adjustments(&img, brightness, contrast, saturation);
-    adjusted.save(&output_path)?;
+    let output_path = write_output(output_path, |path| {
+        adjusted.save(path)?;
+        Ok(())
+    })?;
 
     let metadata =
         std::fs::metadata(&output_path).map_err(|e| AppError::from_io(e, &output_path))?;

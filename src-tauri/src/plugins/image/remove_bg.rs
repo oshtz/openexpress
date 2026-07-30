@@ -8,6 +8,8 @@
 //! Gated behind the `bg-removal` cargo feature so the default build stays
 //! free of `ort` (~200 MB native binaries).
 
+#[cfg(feature = "bg-removal")]
+use crate::output::write_output;
 use crate::{AppError, AppResult};
 use serde::Serialize;
 
@@ -163,7 +165,10 @@ async fn impl_remove_background(
             let alpha = mask_full.get_pixel(x, y).0[0];
             out.put_pixel(x, y, Rgba([src.0[0], src.0[1], src.0[2], alpha]));
         }
-        out.save(&output_path)?;
+        let output_path = write_output(output_path, |path| {
+            out.save(path)?;
+            Ok(())
+        })?;
 
         let meta =
             std::fs::metadata(&output_path).map_err(|e| AppError::from_io(e, &output_path))?;

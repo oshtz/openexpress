@@ -39,7 +39,7 @@ pub async fn trim_audio(
     let duration_str = format!("{:.3}", end_secs - start_secs);
     let guard = JobGuard::new(&registry, job_id);
 
-    run_ffmpeg(
+    let output_path = run_ffmpeg(
         &[
             "-i",
             &input_path,
@@ -71,7 +71,7 @@ pub async fn convert_audio(
     registry: tauri::State<'_, CancellationRegistry>,
 ) -> AppResult<AudioResult> {
     let guard = JobGuard::new(&registry, job_id);
-    run_ffmpeg(
+    let output_path = run_ffmpeg(
         &["-i", &input_path, "-vn", "-y", &output_path],
         Some(&progress),
         guard.flag(),
@@ -100,7 +100,7 @@ pub async fn fade_in_audio(
     }
     let filter = format!("afade=t=in:st=0:d={duration_secs}");
     let guard = JobGuard::new(&registry, job_id);
-    run_ffmpeg(
+    let output_path = run_ffmpeg(
         &["-i", &input_path, "-af", &filter, "-y", &output_path],
         Some(&progress),
         guard.flag(),
@@ -137,7 +137,7 @@ pub async fn fade_out_audio(
     let start = (total_duration_secs - duration_secs).max(0.0);
     let filter = format!("afade=t=out:st={start}:d={duration_secs}");
     let guard = JobGuard::new(&registry, job_id);
-    run_ffmpeg(
+    let output_path = run_ffmpeg(
         &["-i", &input_path, "-af", &filter, "-y", &output_path],
         Some(&progress),
         guard.flag(),
@@ -167,7 +167,7 @@ pub async fn adjust_audio_volume(
     }
     let filter = format!("volume={gain}");
     let guard = JobGuard::new(&registry, job_id);
-    run_ffmpeg(
+    let output_path = run_ffmpeg(
         &["-i", &input_path, "-af", &filter, "-y", &output_path],
         Some(&progress),
         guard.flag(),

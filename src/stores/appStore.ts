@@ -29,11 +29,34 @@ interface AppState {
 
 let toastCounter = 0;
 
+function readTheme(): AppState["theme"] {
+  const value = localStorage.getItem("theme");
+  return value === "light" || value === "dark" || value === "system" ? value : "system";
+}
+
+function readRecentFiles(): RecentFile[] {
+  try {
+    const value: unknown = JSON.parse(localStorage.getItem("recentFiles") || "[]");
+    return Array.isArray(value)
+      ? value.filter(
+          (file): file is RecentFile =>
+            typeof file === "object" &&
+            file !== null &&
+            typeof file.path === "string" &&
+            typeof file.name === "string" &&
+            typeof file.tool === "string" &&
+            typeof file.timestamp === "number",
+        ).slice(0, 20)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
 export const useAppStore = create<AppState>((set) => ({
-  theme:
-    (localStorage.getItem("theme") as "light" | "dark" | "system") || "system",
-  recentFiles: JSON.parse(localStorage.getItem("recentFiles") || "[]"),
-  outputDir: "",
+  theme: readTheme(),
+  recentFiles: readRecentFiles(),
+  outputDir: localStorage.getItem("outputDir") || "",
   toasts: [],
 
   setTheme: (theme) => {
@@ -49,7 +72,10 @@ export const useAppStore = create<AppState>((set) => ({
       return { recentFiles: updated };
     }),
 
-  setOutputDir: (dir) => set({ outputDir: dir }),
+  setOutputDir: (dir) => {
+    localStorage.setItem("outputDir", dir);
+    set({ outputDir: dir });
+  },
 
   pushToast: (kind, message) =>
     set((state) => ({

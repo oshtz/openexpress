@@ -1,3 +1,4 @@
+use crate::output::write_output;
 use crate::{AppError, AppResult};
 use serde::Serialize;
 
@@ -40,7 +41,10 @@ pub async fn rotate_flip_image(
     }
 
     let (w, h) = (img.width(), img.height());
-    img.save(&output_path)?;
+    let output_path = write_output(output_path, |path| {
+        img.save(path)?;
+        Ok(())
+    })?;
 
     let metadata =
         std::fs::metadata(&output_path).map_err(|e| AppError::from_io(e, &output_path))?;

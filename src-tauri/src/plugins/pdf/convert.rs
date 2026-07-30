@@ -1,3 +1,4 @@
+use crate::output::write_output;
 use crate::{AppError, AppResult};
 use serde::Serialize;
 
@@ -93,45 +94,14 @@ pub async fn images_to_pdf(
     });
     doc.trailer.set("Root", catalog_id);
 
-    doc.save(&output_path)
-        .map_err(|e| AppError::from_io(e, &output_path))?;
+    let output_path = write_output(output_path, |path| {
+        doc.save(path)
+            .map(|_| ())
+            .map_err(|error| AppError::from_io(error, path.to_string_lossy()))
+    })?;
 
     Ok(PdfConvertResult {
         output_paths: vec![output_path],
-        page_count,
-    })
-}
-
-#[tauri::command]
-pub async fn pdf_to_images(
-    input_path: String,
-    output_dir: String,
-    format: String,
-) -> AppResult<PdfConvertResult> {
-    // PDF to image conversion requires a rendering engine.
-    // For MVP, we'll use a simple approach: extract embedded images if possible,
-    // otherwise indicate that a renderer like poppler/mupdf is needed.
-    let doc = lopdf::Document::load(&input_path)?;
-
-    let pages = doc.get_pages();
-    let page_count = pages.len() as u32;
-
-    let mut output_paths = Vec::new();
-    let ext = if format.is_empty() { "png" } else { &format };
-
-    for page_num in 1..=page_count {
-        let output_path = format!("{}/page_{}.{}", output_dir, page_num, ext);
-
-        // Placeholder white image — real rendering needs mupdf or poppler bindings.
-        let img = image::RgbImage::from_fn(595, 842, |_x, _y| image::Rgb([255u8, 255u8, 255u8]));
-        let dynamic = image::DynamicImage::ImageRgb8(img);
-        dynamic.save(&output_path)?;
-
-        output_paths.push(output_path);
-    }
-
-    Ok(PdfConvertResult {
-        output_paths,
         page_count,
     })
 }
@@ -140,37 +110,12 @@ pub async fn pdf_to_images(
 mod tests {
     use super::*;
     use image::{ImageBuffer, Rgba};
-    use lopdf::{dictionary, Document, Object};
+    use lopdf::Document;
 
     fn write_test_image(path: &std::path::Path, w: u32, h: u32) {
         ImageBuffer::from_pixel(w, h, Rgba([10u8, 200, 100, 255]))
             .save(path)
             .unwrap();
-    }
-
-    fn write_minimal_pdf(path: &std::path::Path) {
-        let mut doc = Document::with_version("1.5");
-        let pages_id = doc.new_object_id();
-        let page_id = doc.add_object(dictionary! {
-            "Type" => "Page",
-            "Parent" => pages_id,
-            "MediaBox" => vec![0.into(), 0.into(), 612.into(), 792.into()],
-            "Resources" => dictionary! {},
-        });
-        doc.objects.insert(
-            pages_id,
-            Object::Dictionary(dictionary! {
-                "Type" => "Pages",
-                "Kids" => vec![Object::Reference(page_id)],
-                "Count" => 1i64,
-            }),
-        );
-        let catalog_id = doc.add_object(dictionary! {
-            "Type" => "Catalog",
-            "Pages" => pages_id,
-        });
-        doc.trailer.set("Root", catalog_id);
-        doc.save(path).unwrap();
     }
 
     #[tokio::test]
@@ -195,24 +140,5 @@ mod tests {
         assert_eq!(result.page_count, 2);
         let parsed = Document::load(&out).unwrap();
         assert_eq!(parsed.get_pages().len(), 2);
-    }
-
-    #[tokio::test]
-    async fn pdf_to_images_writes_one_output_per_page() {
-        let dir = tempfile::tempdir().unwrap();
-        let pdf = dir.path().join("in.pdf");
-        write_minimal_pdf(&pdf);
-
-        let result = pdf_to_images(
-            pdf.to_string_lossy().into_owned(),
-            dir.path().to_string_lossy().into_owned(),
-            "png".to_string(),
-        )
-        .await
-        .unwrap();
-
-        assert_eq!(result.page_count, 1);
-        assert_eq!(result.output_paths.len(), 1);
-        assert!(std::path::Path::new(&result.output_paths[0]).exists());
     }
 }

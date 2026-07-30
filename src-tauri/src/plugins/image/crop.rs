@@ -1,3 +1,4 @@
+use crate::output::write_output;
 use crate::{AppError, AppResult};
 use serde::Serialize;
 
@@ -27,7 +28,10 @@ pub async fn crop_image(
     let mut img = image::open(&input_path)?;
 
     let cropped = img.crop(x, y, width, height);
-    cropped.save(&output_path)?;
+    let output_path = write_output(output_path, |path| {
+        cropped.save(path)?;
+        Ok(())
+    })?;
 
     let metadata =
         std::fs::metadata(&output_path).map_err(|e| AppError::from_io(e, &output_path))?;

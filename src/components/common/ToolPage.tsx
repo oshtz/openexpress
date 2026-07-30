@@ -59,7 +59,7 @@ export function ToolPage({
   const location = useLocation();
   const accent = accentFromPath(location.pathname);
 
-  // Editorial index — "TOOL 07 / 32 — IMAGE". Skipped for non-tool routes
+  // Editorial index — "TOOL 07 / 31 — IMAGE". Skipped for non-tool routes
   // (Settings) that render through ToolPage.
   const toolIdx = TOOLS.findIndex((t) => t.route === location.pathname);
   const toolCategory = TOOLS[toolIdx]?.category;

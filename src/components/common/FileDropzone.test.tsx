@@ -64,6 +64,6 @@ describe("FileDropzone", () => {
       },
     });
 
-    expect(onFiles).toHaveBeenCalledWith(["C:/media/b.png"]);
+    await waitFor(() => expect(onFiles).toHaveBeenCalledWith(["C:/media/b.png"]));
   });
 });

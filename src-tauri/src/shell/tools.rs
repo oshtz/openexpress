@@ -181,12 +181,6 @@ const TOOLS: &[ToolSpec] = &[
         extensions: PDF_EXTS,
     },
     ToolSpec {
-        id: "pdf-to-image",
-        label: "Convert to images…",
-        route: "/pdf/pdf-to-image",
-        extensions: PDF_EXTS,
-    },
-    ToolSpec {
         id: "pdf-split",
         label: "Split / extract pages…",
         route: "/pdf/split",
@@ -287,7 +281,7 @@ mod tests {
 
     #[test]
     fn shell_catalog_covers_all_routed_tools() {
-        assert_eq!(tools().len(), 32);
+        assert_eq!(tools().len(), 31);
         assert!(find("image-remove-bg").is_some());
         assert!(find("pdf-merge").is_some());
     }

@@ -25,7 +25,6 @@ import {
   Music,
   Merge,
   FileImage,
-  FileDown,
   FileArchive,
   Image as ImageIcon,
   Video,
@@ -84,8 +83,6 @@ export function iconFor(toolId: string, size = 20): ReactNode {
       return <Merge size={size} />;
     case "image-to-pdf":
       return <FileImage size={size} />;
-    case "pdf-to-image":
-      return <FileDown size={size} />;
     case "pdf-compress":
       return <FileArchive size={size} />;
     case "pdf-split":

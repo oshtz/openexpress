@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { invoke, Channel } from "@tauri-apps/api/core";
 import { useAppStore } from "../stores/appStore";
 import { type AppError, presentationFor, toAppError } from "../lib/errors";
+import { allowAssetPaths } from "../lib/assets";
 
 interface ProcessState<T> {
   loading: boolean;
@@ -77,8 +78,16 @@ export function useProcess<T>(options?: ProcessOptions): ProcessState<T> {
 
       try {
         const res = await invoke<T>(command, finalArgs);
+        const output = res as { output_path?: unknown; output_paths?: unknown };
+        const outputPaths = [
+          ...(typeof output.output_path === "string" ? [output.output_path] : []),
+          ...(Array.isArray(output.output_paths)
+            ? output.output_paths.filter((path): path is string => typeof path === "string")
+            : []),
+        ];
+        await allowAssetPaths(outputPaths).catch(() => {});
         setResult(res);
-        const outputPath = (res as { output_path?: unknown })?.output_path;
+        const outputPath = outputPaths[0];
         if (tool && typeof outputPath === "string" && outputPath.length > 0) {
           addRecentFile({
             path: outputPath,

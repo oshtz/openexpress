@@ -1,9 +1,11 @@
+mod assets;
 mod cli;
 mod desktop_lifecycle;
 mod diagnostics;
 mod error;
 #[cfg(target_os = "macos")]
 mod macos_services;
+mod output;
 mod plugins;
 mod shell;
 mod updater;
@@ -27,7 +29,7 @@ pub fn run() {
             }),
         ])
         .max_file_size(5 * 1024 * 1024)
-        .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepAll)
+        .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepSome(3))
         .build();
 
     tauri::Builder::default()
@@ -57,12 +59,6 @@ pub fn run() {
             macos_services::register(app.handle().clone());
             desktop_lifecycle::setup(app)?;
             updater::cleanup_update_backups();
-            // Pre-fetch ffmpeg on a background thread so the first video tool
-            // call doesn't block while ~30 MB downloads.
-            std::thread::spawn(|| match plugins::video::ensure_ffmpeg() {
-                Ok(()) => log::info!("ffmpeg ready"),
-                Err(e) => log::warn!("ffmpeg prefetch failed: {e}"),
-            });
 
             // First-launch CLI args. We emit asynchronously so the frontend
             // has time to register its listener before the event fires.
@@ -80,6 +76,7 @@ pub fn run() {
         })
         .on_window_event(desktop_lifecycle::handle_window_event)
         .invoke_handler(tauri::generate_handler![
+            assets::allow_asset_paths,
             // Image commands
             plugins::image::resize::resize_image,
             plugins::image::crop::crop_image,
@@ -108,7 +105,6 @@ pub fn run() {
             // PDF commands
             plugins::pdf::merge::merge_pdfs,
             plugins::pdf::convert::images_to_pdf,
-            plugins::pdf::convert::pdf_to_images,
             plugins::pdf::compress::compress_pdf,
             plugins::pdf::split::split_pdf,
             plugins::pdf::organize::organize_pdf,

@@ -26,13 +26,13 @@ The current target platforms are Windows and macOS; Linux is kept as a developme
 
 ## Status
 
-Alpha. The core quick-action surface is implemented and wired: 32 tools across image, video, PDF, and audio.
+Alpha. The core quick-action surface is implemented and wired: 31 tools across image, video, PDF, and audio.
 
 ## Tools
 
 - **Image:** Resize, Crop, Convert, Adjust, Compress, Rotate / Flip, Sharpen, Blur, Trace to SVG, Remove BG, AI Upscale
 - **Video:** Trim, Convert, Resize, To GIF, Speed, Extract Audio, Crop, Reverse, Mute, Merge
-- **PDF:** Merge, Image → PDF, PDF → Image, Compress, Split, Organize
+- **PDF:** Merge, Image → PDF, Compress, Split, Organize
 - **Audio:** Trim, Convert, Fade In, Fade Out, Volume
 
 AI tools are local-first and enabled in default app builds. Remove BG and AI Upscale use ONNX-model infrastructure, but model files are not bundled; users explicitly download checksum-verified models from the tool UI on first use.
@@ -44,7 +44,7 @@ Launch OpenExpress, pick a tool from Image, Video, PDF, or Audio, add files by d
 ## Requirements
 
 - **Node** >= 20.19.0 or >= 22.13.0
-- **Rust** >= 1.77.2 (stable toolchain)
+- **Rust** >= 1.88 (stable toolchain)
 - **Tauri prerequisites** for your platform: <https://tauri.app/start/prerequisites/>
 - **FFmpeg** — handled through `ffmpeg-sidecar` for media operations; first use may download/cache the sidecar depending on platform/build.
 
@@ -70,7 +70,7 @@ npm ci
 npm run tauri build
 ```
 
-Local builds produce the configured Tauri bundles in `src-tauri/target/release/bundle/`. The release workflow publishes a Windows portable exe, a macOS DMG, a macOS `.app.zip` updater payload, and `latest.json`.
+Local builds produce the configured Tauri bundles in `src-tauri/target/release/bundle/`. The release workflow requires signed Windows and macOS artifacts, then publishes a Windows portable exe, a macOS DMG, a macOS `.app.zip` updater payload, `latest.json`, and `SHA256SUMS.txt`.
 
 Useful local helpers:
 
@@ -83,15 +83,21 @@ npm run models:mirror
 
 ```sh
 # Frontend
+npm run check:version
+npm run audit:prod
 npx tsc --noEmit -p tsconfig.app.json
 npm run lint
+npm test
 npm run build
+npm run smoke:routes
 
 # Backend
 cd src-tauri
 cargo fmt --all -- --check
 cargo clippy --all-targets -- -D warnings
 cargo test --lib
+cargo audit
+cargo +1.88.0 check --locked
 ```
 
 For packaged-app confidence, run an interactive desktop smoke pass for drag/drop, file dialogs, crop/trim controls, media playback metadata, model downloads, batch cancellation, CLI handoff, and Windows Explorer shell integration.

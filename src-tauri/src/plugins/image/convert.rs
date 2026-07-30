@@ -1,3 +1,4 @@
+use crate::output::write_output;
 use crate::{AppError, AppResult};
 use serde::Serialize;
 
@@ -12,7 +13,10 @@ pub struct ConvertResult {
 pub async fn convert_image(input_path: String, output_path: String) -> AppResult<ConvertResult> {
     let img = image::open(&input_path)?;
 
-    img.save(&output_path)?;
+    let output_path = write_output(output_path, |path| {
+        img.save(path)?;
+        Ok(())
+    })?;
 
     let format = std::path::Path::new(&output_path)
         .extension()

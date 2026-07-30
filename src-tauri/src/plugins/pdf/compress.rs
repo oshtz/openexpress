@@ -1,3 +1,4 @@
+use crate::output::write_output;
 use crate::{AppError, AppResult};
 use lopdf::Document;
 use serde::Serialize;
@@ -22,8 +23,11 @@ pub async fn compress_pdf(input_path: String, output_path: String) -> AppResult<
     doc.delete_zero_length_streams();
     doc.prune_objects();
 
-    doc.save(&output_path)
-        .map_err(|e| AppError::from_io(e, &output_path))?;
+    let output_path = write_output(output_path, |path| {
+        doc.save(path)
+            .map(|_| ())
+            .map_err(|error| AppError::from_io(error, path.to_string_lossy()))
+    })?;
 
     let compressed_size = std::fs::metadata(&output_path)
         .map_err(|e| AppError::from_io(e, &output_path))?

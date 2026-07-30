@@ -1,3 +1,4 @@
+use crate::output::write_output;
 use crate::{AppError, AppResult};
 use serde::Serialize;
 
@@ -31,7 +32,10 @@ pub async fn sharpen_image(
 
     let img = image::open(&input_path)?;
     let sharpened = img.unsharpen(sigma, threshold);
-    sharpened.save(&output_path)?;
+    let output_path = write_output(output_path, |path| {
+        sharpened.save(path)?;
+        Ok(())
+    })?;
 
     let metadata =
         std::fs::metadata(&output_path).map_err(|e| AppError::from_io(e, &output_path))?;

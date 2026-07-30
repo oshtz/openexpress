@@ -140,7 +140,7 @@ pub fn is_present(app: &tauri::AppHandle, id: &str) -> bool {
     model_path(app, id)
         .map(|p| {
             p.exists()
-                && spec.archive.map_or(true, |archive| {
+                && spec.archive.is_none_or(|archive| {
                     let Some(dir) = p.parent() else {
                         return false;
                     };

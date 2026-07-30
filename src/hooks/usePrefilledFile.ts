@@ -1,28 +1,27 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
+import { allowAssetPaths } from "../lib/assets";
 
 /**
- * Once-per-mount delivery of a `?file=...` URL param to the tool page.
+ * Delivers each `?file=...` URL param to the mounted tool page once.
  *
- * The launch-action listener navigates to `/image/resize?file=C:\photo.jpg`;
- * each tool page calls `usePrefilledFile(handleFiles)` to receive the path
- * the same way a drop or dialog selection arrives. The param is removed
- * after delivery so navigating back to the page later doesn't re-trigger.
+ * The launch-action listener can navigate to the same route repeatedly, so
+ * delivery follows the current query value instead of component mount.
  */
 export function usePrefilledFile(onFile: (paths: string[]) => void) {
   const [params, setParams] = useSearchParams();
+  const onFileRef = useRef(onFile);
+  const file = params.get("file");
 
   useEffect(() => {
-    const file = params.get("file");
+    onFileRef.current = onFile;
+  }, [onFile]);
+
+  useEffect(() => {
     if (!file) return;
-    onFile([file]);
-    // Clear the param so it fires exactly once per launch.
-    const next = new URLSearchParams(params);
-    next.delete("file");
-    setParams(next, { replace: true });
-    // params and setParams are stable per react-router-dom; only onFile
-    // changes if the consumer doesn't memoize, which is fine — we early-
-    // return after the first delivery clears the param.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    void allowAssetPaths([file]).catch(() => {}).then(() => {
+      onFileRef.current([file]);
+      setParams({}, { replace: true });
+    });
+  }, [file, setParams]);
 }

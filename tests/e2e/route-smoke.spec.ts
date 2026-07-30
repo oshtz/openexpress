@@ -30,10 +30,9 @@ const TOOL_ROUTES: ToolRoute[] = [
   { path: "/video/reverse", title: "Reverse Video", action: /reverse video/i },
   { path: "/video/mute", title: "Mute Video", action: /mute video/i },
   { path: "/video/merge", title: "Merge Videos", action: /merge videos/i },
-  // PDF (6)
+  // PDF (5)
   { path: "/pdf/merge", title: "Merge PDFs", action: /merge pdfs/i },
   { path: "/pdf/image-to-pdf", title: "Images to PDF", action: /convert to pdf/i },
-  { path: "/pdf/pdf-to-image", title: "PDF to Images", action: /extract images/i },
   { path: "/pdf/compress", title: "Compress PDF", action: /compress pdf/i },
   { path: "/pdf/split", title: "Split PDF", action: /extract pages/i },
   { path: "/pdf/organize", title: "Organize Pages", action: /save .* pdf/i },
@@ -60,8 +59,8 @@ test.describe("tool route smoke", () => {
   }
 });
 
-test("32 tool routes are covered", () => {
-  expect(TOOL_ROUTES).toHaveLength(32);
+test("31 tool routes are covered", () => {
+  expect(TOOL_ROUTES).toHaveLength(31);
 });
 
 test("home exposes the four top-level tool categories", async ({ page }) => {
