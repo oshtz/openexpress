@@ -1,5 +1,4 @@
-import type { ReactNode } from "react";
-import { Label } from "./Label";
+import { cloneElement, isValidElement, useId, type ReactNode } from "react";
 
 interface FieldProps {
   /** Field caption rendered above the control. */
@@ -12,17 +11,31 @@ interface FieldProps {
 
 /** Label + control wrapper — the standard tool-settings form row. */
 export function Field({ label, value, children, className = "" }: FieldProps) {
+  const labelId = useId();
+  const control = isValidElement<{ "aria-labelledby"?: string }>(children)
+    ? cloneElement(children, {
+        "aria-labelledby": children.props["aria-labelledby"] ?? labelId,
+      })
+    : children;
+
   return (
-    <div className={className}>
+    <div className={className} role="group" aria-labelledby={labelId}>
       {value !== undefined ? (
         <div className="mb-1.5 flex items-center justify-between">
-          <Label className="mb-0">{label}</Label>
+          <span id={labelId} className="text-[13px] font-medium text-text-secondary">
+            {label}
+          </span>
           <span className="text-[13px] font-semibold tabular-nums text-text">{value}</span>
         </div>
       ) : (
-        <Label className="mb-1.5">{label}</Label>
+        <span
+          id={labelId}
+          className="mb-1.5 block text-[13px] font-medium text-text-secondary"
+        >
+          {label}
+        </span>
       )}
-      {children}
+      {control}
     </div>
   );
 }

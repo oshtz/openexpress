@@ -18,7 +18,11 @@ export function ToastContainer() {
   const toasts = useAppStore((s) => s.toasts);
 
   return (
-    <div className="fixed bottom-6 right-6 flex flex-col gap-2 z-50 pointer-events-none">
+    <div
+      className="fixed bottom-6 right-6 flex flex-col gap-2 z-50 pointer-events-none"
+      aria-live="polite"
+      aria-relevant="additions"
+    >
       {toasts.map((t) => (
         <ToastItem key={t.id} toast={t} />
       ))}
@@ -38,6 +42,7 @@ function ToastItem({ toast }: { toast: Toast }) {
 
   return (
     <div
+      role={toast.kind === "error" ? "alert" : "status"}
       className="pointer-events-auto relative bg-bg-secondary border border-border flex items-start gap-3 px-4 py-3 max-w-sm animate-slide-in"
       style={{ borderLeft: `4px solid ${ACCENT_BY_KIND[toast.kind]}` }}
     >

@@ -82,6 +82,7 @@ export function PdfCompress() {
     <FileDropzone
       accept={["pdf"]}
       multiple
+      selectedPaths={inputPaths}
       onFiles={handleFiles}
       label="Drop one or more PDFs here or click to browse"
     />

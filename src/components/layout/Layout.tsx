@@ -5,6 +5,7 @@ import { ErrorBoundary } from "../common/ErrorBoundary";
 import { ToastContainer } from "../common/ToastContainer";
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 import { useLaunchAction } from "../../hooks/useLaunchAction";
+import { JobTray } from "./JobTray";
 
 export function Layout() {
   useKeyboardShortcuts();
@@ -14,14 +15,17 @@ export function Layout() {
       <Titlebar />
       <div className="flex flex-1 min-h-0">
         <Sidebar />
-        <main className="flex-1 overflow-y-auto">
-          {/* Swiss "page" wrapper — hairline left/right rules, generous gutter. */}
-          <div className="max-w-[1440px] mx-auto px-8 py-10 border-l border-r border-border-subtle min-h-full">
-            <ErrorBoundary>
-              <Outlet />
-            </ErrorBoundary>
-          </div>
-        </main>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <main className="flex-1 overflow-y-auto">
+            {/* Swiss "page" wrapper — hairline left/right rules, generous gutter. */}
+            <div className="max-w-[1440px] mx-auto px-8 py-10 border-l border-r border-border-subtle min-h-full">
+              <ErrorBoundary>
+                <Outlet />
+              </ErrorBoundary>
+            </div>
+          </main>
+          <JobTray />
+        </div>
       </div>
       <ToastContainer />
     </div>

@@ -304,7 +304,7 @@ jobs:
         env:
           UPDATE_TAG: ${{ steps.release.outputs.tag }}
           UPDATE_VERSION: ${{ steps.release.outputs.version }}
-          UPDATE_NOTES: "Security, output-integrity, and reliability improvements."
+          UPDATE_NOTES: "Product, accessibility, and reliability improvements."
           MACOS_UPDATE_PLATFORM: ${{ steps.macos.outputs.platform }}
         run: node scripts/generate-update-manifest.mjs
 
@@ -324,7 +324,7 @@ jobs:
           tag_name: ${{ steps.release.outputs.tag }}
           name: OpenExpress ${{ steps.release.outputs.tag }}
           body: |
-            Security, output-integrity, and reliability improvements.
+            Product, accessibility, and reliability improvements.
 
             Signed release assets:
             - Windows: OpenExpress-Portable.exe

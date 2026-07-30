@@ -1,13 +1,15 @@
+import { useMemo, useState } from "react";
+import { ArrowUpRight, FileText, FolderOpen, RotateCcw, Search, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAppStore } from "../stores/appStore";
 import { TOOLS, type ToolSpec } from "../lib/tools";
+import { getDirName } from "../lib/utils";
 
 type Category = ToolSpec["category"];
 
 interface CategoryMeta {
   label: string;
   accent: string;
-  accentInk: string;
   tagline: string;
 }
 
@@ -17,318 +19,294 @@ const CAT_META: Record<Category, CategoryMeta> = {
   image: {
     label: "Image",
     accent: "var(--color-accent-gold)",
-    accentInk: "var(--color-ink-on-gold)",
-    tagline: "Resize, crop, convert, and adjust.",
+    tagline: "Resize, crop, convert, adjust",
   },
   video: {
     label: "Video",
     accent: "var(--color-accent-steel)",
-    accentInk: "var(--color-ink-on-steel)",
-    tagline: "Trim, transcode, and condense.",
+    tagline: "Trim, transcode, condense",
   },
   pdf: {
     label: "PDF",
     accent: "var(--color-accent-signal)",
-    accentInk: "var(--color-ink-on-signal)",
-    tagline: "Merge, compress, convert.",
+    tagline: "Merge, compress, organize",
   },
   audio: {
     label: "Audio",
     accent: "var(--color-accent-sage)",
-    accentInk: "var(--color-ink-on-sage)",
-    tagline: "Trim, fade, convert.",
+    tagline: "Trim, fade, convert",
   },
 };
 
 function groupByCategory(): Record<Category, ToolSpec[]> {
-  const out: Record<Category, ToolSpec[]> = { image: [], video: [], pdf: [], audio: [] };
-  for (const tool of TOOLS) out[tool.category].push(tool);
-  return out;
+  const grouped: Record<Category, ToolSpec[]> = {
+    image: [],
+    video: [],
+    pdf: [],
+    audio: [],
+  };
+  for (const tool of TOOLS) grouped[tool.category].push(tool);
+  return grouped;
 }
 
-function ToolRow({
-  tool,
-  accent,
-  onClick,
-}: {
-  tool: ToolSpec;
-  accent: string;
-  onClick: () => void;
-}) {
+function ToolRow({ tool, accent, onClick }: { tool: ToolSpec; accent: string; onClick: () => void }) {
   return (
     <button
+      type="button"
       onClick={onClick}
-      className="group w-full grid grid-cols-12 gap-4 items-baseline text-left border-b border-border-subtle hover:bg-bg-tertiary transition-colors"
-      style={{ padding: "18px 4px" }}
+      className="group grid w-full grid-cols-12 items-baseline gap-4 border-b border-border-subtle px-1 py-3.5 text-left hover:bg-bg-tertiary"
     >
-      <span
-        className="col-span-4"
-        style={{
-          fontSize: 17,
-          fontWeight: 500,
-          color: "var(--color-text)",
-        }}
-      >
-        {tool.label}
-      </span>
-      <span
-        className="col-span-7"
-        style={{
-          fontSize: 14,
-          lineHeight: 1.4,
-          color: "var(--color-text-secondary)",
-        }}
-      >
+      <span className="col-span-4 text-[15px] font-medium text-text">{tool.label}</span>
+      <span className="col-span-7 text-[13px] leading-snug text-text-secondary">
         {tool.description}
       </span>
-      <span
-        className="col-span-1 text-right pr-2 transition-transform group-hover:translate-x-1"
-        style={{ color: accent, fontSize: 20, lineHeight: 1 }}
-      >
-        -&gt;
-      </span>
+      <ArrowUpRight
+        size={15}
+        className="col-span-1 ml-auto transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+        style={{ color: accent }}
+      />
     </button>
   );
 }
 
+async function openLocalPath(path: string): Promise<void> {
+  if (!("__TAURI_INTERNALS__" in window)) return;
+  const { open } = await import("@tauri-apps/plugin-shell");
+  await open(path);
+}
+
 export function Home() {
   const navigate = useNavigate();
-  const recentFiles = useAppStore((s) => s.recentFiles);
-  const grouped = groupByCategory();
+  const recentFiles = useAppStore((state) => state.recentFiles);
+  const removeRecentFile = useAppStore((state) => state.removeRecentFile);
+  const pushToast = useAppStore((state) => state.pushToast);
+  const [query, setQuery] = useState("");
+  const grouped = useMemo(() => groupByCategory(), []);
+  const results = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) return [];
+    return TOOLS.filter((tool) =>
+      `${tool.label} ${tool.description} ${tool.category}`.toLowerCase().includes(normalized),
+    );
+  }, [query]);
+
+  const openPath = (path: string) => {
+    void openLocalPath(path).catch((error) => {
+      pushToast("error", error instanceof Error ? error.message : String(error));
+    });
+  };
 
   return (
     <div>
-      <header className="animate-fade-in-up grid grid-cols-12 gap-8 border-b border-border pb-10 mb-12">
-        <div className="col-span-12 md:col-span-8">
+      <header className="animate-fade-in-up mb-5 grid grid-cols-12 gap-6 border-b border-border pb-5">
+        <div className="col-span-9">
           <h1
-            style={{
-              fontFamily: "var(--font-sans)",
-              fontWeight: 700,
-              fontSize: "clamp(2.6rem, 6vw, 5.2rem)",
-              lineHeight: 0.9,
-              textTransform: "uppercase",
-              color: "var(--color-text)",
-            }}
+            className="text-[42px] font-bold uppercase leading-[0.92] text-text"
+            style={{ fontFamily: "var(--font-display)", letterSpacing: 0 }}
           >
-            Edit media.
-            <br />
-            Locally.
+            Edit media. Locally.
           </h1>
-          <p
-            style={{
-              fontSize: 15,
-              lineHeight: 1.55,
-              color: "var(--color-text-secondary)",
-              maxWidth: "54ch",
-              marginTop: 24,
-            }}
-          >
-            Fast, private tools for image, video, audio, and PDF. Everything runs
-            on your machine. No cloud. No subscription. No tracking.
+          <p className="mt-3 max-w-[66ch] text-[13px] leading-relaxed text-text-secondary">
+            Private desktop tools for image, video, audio, and PDF. No cloud round-trip.
           </p>
         </div>
-
-        <aside className="col-span-12 md:col-span-4 md:border-l md:border-border md:pl-8 flex flex-col justify-between">
-          <div>
-            <div className="swiss-label">Tools available</div>
-            <div className="numeral-outline mt-2" style={{ fontSize: "7rem", lineHeight: 0.85 }}>
-              {String(TOOLS.length).padStart(2, "0")}
-            </div>
+        <div className="col-span-3 border-l border-border pl-5">
+          <div className="swiss-label">Available</div>
+          <div className="mt-1 font-mono text-[30px] leading-none text-text">
+            {String(TOOLS.length).padStart(2, "0")}
           </div>
-        </aside>
+        </div>
       </header>
 
-      <section className="grid grid-cols-1 md:grid-cols-4 border border-border mb-12">
-        {CATEGORIES.map((cat, idx) => {
-          const meta = CAT_META[cat];
-          const items = grouped[cat];
-          return (
+      <section className="mb-5" aria-label="Find a tool">
+        <label className="sr-only" htmlFor="tool-search">
+          Find a tool
+        </label>
+        <div className="flex h-11 items-center border border-border bg-bg-secondary px-3 focus-within:border-text">
+          <Search size={15} className="mr-3 shrink-0 text-text-muted" />
+          <input
+            id="tool-search"
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Find a tool by action or file type"
+            className="h-full min-w-0 flex-1 bg-transparent text-[13px] text-text outline-none placeholder:text-text-muted"
+          />
+          {query && (
             <button
-              key={cat}
               type="button"
-              aria-label={`Jump to ${meta.label}`}
-              onClick={() => {
-                const reduceMotion = window.matchMedia(
-                  "(prefers-reduced-motion: reduce)",
-                ).matches;
-                document.getElementById(`section-${cat}`)?.scrollIntoView({
-                  behavior: reduceMotion ? "auto" : "smooth",
-                  block: "start",
-                });
-              }}
-              className={`animate-fade-in-up relative px-8 py-10 pb-36 text-left transition-opacity hover:opacity-90 ${idx > 0 ? "md:border-l border-border border-t md:border-t-0" : ""}`}
-              style={{
-                background: meta.accent,
-                color: meta.accentInk,
-                minHeight: 240,
-                animationDelay: `${60 + idx * 50}ms`,
-              }}
+              onClick={() => setQuery("")}
+              className="px-2 text-[11px] font-semibold uppercase text-text-muted hover:text-text"
             >
-              <div
-                style={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase",
-                  color: meta.accentInk,
-                  opacity: 0.7,
-                }}
-              >
-                {meta.label}
-              </div>
-
-              <div
-                className="mt-2"
-                style={{
-                  fontFamily: "var(--font-sans)",
-                  fontSize: 24,
-                  fontWeight: 500,
-                  lineHeight: 1.15,
-                  maxWidth: "22ch",
-                }}
-              >
-                {meta.tagline}
-              </div>
-
-              <div
-                className="absolute left-8 right-8 bottom-10 flex items-end justify-between pt-6"
-                style={{ borderTop: `1px solid ${meta.accentInk}`, opacity: 0.85 }}
-              >
-                <div
-                  style={{
-                    fontFamily: "var(--font-sans)",
-                    fontWeight: 400,
-                    fontSize: 72,
-                    lineHeight: 0.85,
-                    color: "transparent",
-                    WebkitTextStroke: `1.5px ${meta.accentInk}`,
-                  }}
-                >
-                  {String(items.length).padStart(2, "0")}
-                </div>
-                <div
-                  style={{
-                    color: meta.accentInk,
-                    fontSize: 11,
-                    fontWeight: 600,
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                    textAlign: "right",
-                    lineHeight: 1.5,
-                  }}
-                >
-                  {items.length === 1 ? "tool" : "tools"}
-                </div>
-              </div>
+              Clear
             </button>
-          );
-        })}
-      </section>
+          )}
+        </div>
 
-      <div className="animate-fade-in-up flex items-baseline justify-between mb-6">
-        <span className="swiss-label">All tools</span>
-      </div>
-
-      {CATEGORIES.map((cat) => {
-        const meta = CAT_META[cat];
-        const items = grouped[cat];
-        if (items.length === 0) return null;
-
-        return (
-          <section
-            key={cat}
-            id={`section-${cat}`}
-            className="animate-fade-in-up mb-14 scroll-mt-6"
-          >
-            <div className="flex items-baseline justify-between border-b border-border pb-4 mb-0">
-              <div className="flex items-baseline gap-4">
-                <span
-                  style={{
-                    width: 12,
-                    height: 12,
-                    background: meta.accent,
-                    transform: "translateY(1px)",
-                    display: "inline-block",
-                  }}
-                />
-                <h2
-                  style={{
-                    fontFamily: "var(--font-sans)",
-                    fontWeight: 700,
-                    fontSize: 28,
-                    textTransform: "uppercase",
-                    color: "var(--color-text)",
-                  }}
-                >
-                  {meta.label}
-                </h2>
-              </div>
-              <span className="swiss-label">
-                {items.length} {items.length === 1 ? "tool" : "tools"}
-              </span>
-            </div>
-
-            <div>
-              {items.map((tool) => (
+        {query.trim() && (
+          <div className="border-x border-b border-border bg-bg-secondary">
+            {results.length > 0 ? (
+              results.map((tool) => (
                 <ToolRow
                   key={tool.id}
                   tool={tool}
-                  accent={meta.accent}
+                  accent={CAT_META[tool.category].accent}
                   onClick={() => navigate(tool.route)}
                 />
-              ))}
-            </div>
-          </section>
-        );
-      })}
+              ))
+            ) : (
+              <p className="px-4 py-4 text-[13px] text-text-muted">No matching tools.</p>
+            )}
+          </div>
+        )}
+      </section>
+
+      <nav
+        className="mb-7 grid grid-cols-4 border border-border bg-bg-secondary"
+        aria-label="Tool categories"
+      >
+        {CATEGORIES.map((category, index) => {
+          const meta = CAT_META[category];
+          const items = grouped[category];
+          return (
+            <button
+              key={category}
+              type="button"
+              onClick={() =>
+                document.getElementById(`section-${category}`)?.scrollIntoView({
+                  behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+                    ? "auto"
+                    : "smooth",
+                  block: "start",
+                })
+              }
+              className={`min-h-[86px] px-4 py-3 text-left hover:bg-bg-tertiary ${
+                index > 0 ? "border-l border-border" : ""
+              }`}
+            >
+              <span className="flex items-center justify-between">
+                <span className="text-[12px] font-bold uppercase text-text">{meta.label}</span>
+                <span
+                  className="h-2.5 w-2.5"
+                  style={{ background: meta.accent }}
+                  aria-hidden="true"
+                />
+              </span>
+              <span className="mt-2 block text-[11px] leading-snug text-text-secondary">
+                {meta.tagline}
+              </span>
+              <span className="mt-1 block font-mono text-[10px] text-text-muted">
+                {items.length} {items.length === 1 ? "tool" : "tools"}
+              </span>
+            </button>
+          );
+        })}
+      </nav>
 
       {recentFiles.length > 0 && (
-        <section className="animate-fade-in-up mb-12">
-          <div className="flex items-baseline justify-between border-b border-border pb-4">
-            <h2
-              style={{
-                fontFamily: "var(--font-sans)",
-                fontWeight: 700,
-                fontSize: 22,
-                textTransform: "uppercase",
-                color: "var(--color-text)",
-              }}
-            >
-              Recent files
+        <section className="animate-fade-in-up mb-8" aria-labelledby="recent-heading">
+          <div className="flex items-baseline justify-between border-b border-border pb-2.5">
+            <h2 id="recent-heading" className="text-[17px] font-bold uppercase text-text">
+              Recent outputs
             </h2>
-            <span className="swiss-label">{Math.min(recentFiles.length, 5)} entries</span>
+            <span className="swiss-label">{Math.min(recentFiles.length, 5)} shown</span>
           </div>
-
           <div>
             {recentFiles.slice(0, 5).map((file) => (
               <div
-                key={file.path + file.timestamp}
-                className="grid grid-cols-12 gap-4 items-baseline border-b border-border-subtle py-3 hover:bg-bg-tertiary transition-colors px-1"
+                key={file.path}
+                className="grid min-h-11 grid-cols-[18px_minmax(0,1fr)_auto] items-center gap-2 border-b border-border-subtle px-1 hover:bg-bg-tertiary"
               >
-                <span
-                  className="col-span-8 truncate"
-                  style={{ fontSize: 14, color: "var(--color-text)" }}
-                  title={file.path}
-                >
-                  {file.name}
-                </span>
-                <span
-                  className="col-span-4 text-right pr-2"
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 600,
-                    letterSpacing: "0.06em",
-                    textTransform: "uppercase",
-                    color: "var(--color-text-muted)",
-                  }}
-                >
-                  {file.tool}
-                </span>
+                <FileText size={13} className="text-text-muted" />
+                <div className="min-w-0">
+                  <div className="truncate text-[12px] font-medium text-text" title={file.path}>
+                    {file.name}
+                  </div>
+                  <div className="truncate text-[10px] uppercase text-text-muted">{file.tool}</div>
+                </div>
+                <div className="flex items-center">
+                  <button
+                    type="button"
+                    title="Open output"
+                    aria-label={`Open ${file.name}`}
+                    onClick={() => openPath(file.path)}
+                    className="inline-flex h-8 w-8 items-center justify-center text-text-muted hover:text-text"
+                  >
+                    <ArrowUpRight size={13} />
+                  </button>
+                  <button
+                    type="button"
+                    title="Open containing folder"
+                    aria-label={`Open folder containing ${file.name}`}
+                    onClick={() => openPath(getDirName(file.path))}
+                    className="inline-flex h-8 w-8 items-center justify-center text-text-muted hover:text-text"
+                  >
+                    <FolderOpen size={13} />
+                  </button>
+                  {file.route && file.sourcePath && (
+                    <button
+                      type="button"
+                      title="Use this tool again"
+                      aria-label={`Use ${file.tool} again`}
+                      onClick={() =>
+                        navigate(`${file.route}?file=${encodeURIComponent(file.sourcePath!)}`)
+                      }
+                      className="inline-flex h-8 w-8 items-center justify-center text-text-muted hover:text-text"
+                    >
+                      <RotateCcw size={13} />
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    title="Remove from recent outputs"
+                    aria-label={`Remove ${file.name} from recent outputs`}
+                    onClick={() => removeRecentFile(file.path)}
+                    className="inline-flex h-8 w-8 items-center justify-center text-text-muted hover:text-danger"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         </section>
       )}
+
+      <div className="animate-fade-in-up mb-3 flex items-baseline justify-between">
+        <span className="swiss-label">All tools</span>
+      </div>
+
+      {CATEGORIES.map((category) => {
+        const meta = CAT_META[category];
+        const items = grouped[category];
+        return (
+          <section
+            key={category}
+            id={`section-${category}`}
+            className="animate-fade-in-up mb-10 scroll-mt-6"
+          >
+            <div className="flex items-baseline justify-between border-b border-border pb-3">
+              <div className="flex items-baseline gap-3">
+                <span
+                  className="inline-block h-2.5 w-2.5"
+                  style={{ background: meta.accent }}
+                  aria-hidden="true"
+                />
+                <h2 className="text-[22px] font-bold uppercase text-text">{meta.label}</h2>
+              </div>
+              <span className="swiss-label">{items.length}</span>
+            </div>
+            {items.map((tool) => (
+              <ToolRow
+                key={tool.id}
+                tool={tool}
+                accent={meta.accent}
+                onClick={() => navigate(tool.route)}
+              />
+            ))}
+          </section>
+        );
+      })}
     </div>
   );
 }

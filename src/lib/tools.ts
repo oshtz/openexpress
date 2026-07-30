@@ -75,3 +75,7 @@ export function toolsForExtension(ext: string): ToolSpec[] {
 export function toolsForPath(path: string): ToolSpec[] {
   return toolsForExtension(extensionOf(path));
 }
+
+export function toolForRoute(route: string): ToolSpec | undefined {
+  return TOOLS.find((tool) => tool.route === route);
+}

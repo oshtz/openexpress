@@ -64,6 +64,7 @@ export function VideoMerge() {
     <FileDropzone
       accept={VIDEO_EXTS}
       multiple
+      selectedPaths={inputPaths}
       onFiles={handleFiles}
       label="Drop videos here or click to browse"
     />

@@ -20,4 +20,25 @@ describe("appStore persistence", () => {
 
     expect(useAppStore.getState().recentFiles).toEqual([]);
   });
+
+  it("keeps running jobs when completed jobs are cleared", async () => {
+    const { useAppStore } = await import("./appStore");
+    const baseJob = {
+      tool: "Resize",
+      route: "/image/resize",
+      startedAt: 1,
+      status: "running" as const,
+      total: 1,
+      completed: 0,
+      failed: 0,
+      progress: null,
+    };
+
+    useAppStore.getState().beginJob({ ...baseJob, id: "done" });
+    useAppStore.getState().finishJob("done", "succeeded");
+    useAppStore.getState().beginJob({ ...baseJob, id: "active" });
+    useAppStore.getState().clearFinishedJobs();
+
+    expect(useAppStore.getState().jobs.map((job) => job.id)).toEqual(["active"]);
+  });
 });

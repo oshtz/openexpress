@@ -1,5 +1,6 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { FolderOpen } from "lucide-react";
+import { useId } from "react";
 import { Input } from "../ui/Input";
 import { Label } from "../ui/Label";
 
@@ -10,6 +11,7 @@ interface OutputPathProps {
 }
 
 export function OutputPath({ value, onChange, label = "Output" }: OutputPathProps) {
+  const id = useId();
   const browse = async () => {
     const dir = await open({ directory: true });
     if (dir) onChange(dir as string);
@@ -17,9 +19,12 @@ export function OutputPath({ value, onChange, label = "Output" }: OutputPathProp
 
   return (
     <div>
-      <Label className="mb-1.5">{label}</Label>
+      <Label className="mb-1.5" htmlFor={id}>
+        {label}
+      </Label>
       <div className="flex gap-2">
         <Input
+          id={id}
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
@@ -27,6 +32,9 @@ export function OutputPath({ value, onChange, label = "Output" }: OutputPathProp
           className="flex-1"
         />
         <button
+          type="button"
+          aria-label={`Browse for ${label.toLowerCase()}`}
+          title={`Browse for ${label.toLowerCase()}`}
           onClick={browse}
           className="px-3 py-2.5 bg-bg-secondary border border-border hover:border-text transition-colors group"
         >

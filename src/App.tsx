@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Navigate, Routes, Route } from "react-router-dom";
 import { Layout } from "./components/layout/Layout";
 import { Home } from "./pages/Home";
 import { ImageResize } from "./pages/image/ImageResize";
@@ -73,6 +73,7 @@ export default function App() {
         <Route path="/audio/volume" element={<AudioVolume />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/pick" element={<PickTool />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
   );

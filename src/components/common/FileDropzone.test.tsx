@@ -66,4 +66,21 @@ describe("FileDropzone", () => {
 
     await waitFor(() => expect(onFiles).toHaveBeenCalledWith(["C:/media/b.png"]));
   });
+
+  it("shows selected batch files and removes one without reopening the picker", async () => {
+    const onFiles = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <FileDropzone
+        multiple
+        selectedPaths={["C:/media/a.png", "C:/media/b.png"]}
+        onFiles={onFiles}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Remove b.png" }));
+
+    expect(onFiles).toHaveBeenCalledWith(["C:/media/a.png"]);
+    expect(mockDialogOpen).not.toHaveBeenCalled();
+  });
 });

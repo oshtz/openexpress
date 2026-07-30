@@ -74,7 +74,6 @@ pub fn run() {
 
             Ok(())
         })
-        .on_window_event(desktop_lifecycle::handle_window_event)
         .invoke_handler(tauri::generate_handler![
             assets::allow_asset_paths,
             // Image commands

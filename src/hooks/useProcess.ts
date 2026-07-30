@@ -3,6 +3,7 @@ import { invoke, Channel } from "@tauri-apps/api/core";
 import { useAppStore } from "../stores/appStore";
 import { type AppError, presentationFor, toAppError } from "../lib/errors";
 import { allowAssetPaths } from "../lib/assets";
+import { toolForRoute } from "../lib/tools";
 
 interface ProcessState<T> {
   loading: boolean;
@@ -53,6 +54,9 @@ export function useProcess<T>(options?: ProcessOptions): ProcessState<T> {
   const [progress, setProgress] = useState<number | null>(null);
   const pushToast = useAppStore((s) => s.pushToast);
   const addRecentFile = useAppStore((s) => s.addRecentFile);
+  const beginJob = useAppStore((s) => s.beginJob);
+  const updateJob = useAppStore((s) => s.updateJob);
+  const finishJob = useAppStore((s) => s.finishJob);
   const tool = options?.tool;
   const trackProgress = options?.trackProgress ?? false;
   const cancelCommand = options?.cancelCommand;
@@ -62,6 +66,26 @@ export function useProcess<T>(options?: ProcessOptions): ProcessState<T> {
 
   const run = useCallback(
     async (command: string, args?: Record<string, unknown>): Promise<T | null> => {
+      const jobId = newJobId();
+      const route = window.location.pathname;
+      const inputPath =
+        typeof args?.inputPath === "string"
+          ? args.inputPath
+          : Array.isArray(args?.inputPaths) && args.inputPaths.length === 1
+            ? String(args.inputPaths[0])
+            : undefined;
+      beginJob({
+        id: jobId,
+        tool: tool ?? toolForRoute(route)?.label ?? command,
+        route,
+        inputName: inputPath ? basename(inputPath) : undefined,
+        startedAt: Date.now(),
+        status: "running",
+        total: 1,
+        completed: 0,
+        failed: 0,
+        progress: trackProgress ? 0 : null,
+      });
       setLoading(true);
       setError(null);
       setResult(null);
@@ -70,8 +94,10 @@ export function useProcess<T>(options?: ProcessOptions): ProcessState<T> {
       let finalArgs = args ?? {};
       if (trackProgress) {
         const channel = new Channel<number>();
-        channel.onmessage = (pct) => setProgress(pct);
-        const jobId = newJobId();
+        channel.onmessage = (pct) => {
+          setProgress(pct);
+          updateJob(jobId, { progress: pct });
+        };
         jobIdRef.current = jobId;
         finalArgs = { ...finalArgs, progress: channel, jobId };
       }
@@ -94,11 +120,21 @@ export function useProcess<T>(options?: ProcessOptions): ProcessState<T> {
             name: basename(outputPath),
             tool,
             timestamp: Date.now(),
+            route,
+            sourcePath: inputPath,
           });
         }
+        updateJob(jobId, { completed: 1 });
+        finishJob(jobId, "succeeded");
         return res;
       } catch (rawErr) {
         const appErr = toAppError(rawErr);
+        updateJob(jobId, { completed: 1, failed: 1 });
+        finishJob(
+          jobId,
+          appErr.kind === "Cancelled" ? "cancelled" : "failed",
+          appErr.message,
+        );
         setError(appErr);
         const presentation = presentationFor(appErr);
         if (!presentation.silent) {
@@ -113,7 +149,15 @@ export function useProcess<T>(options?: ProcessOptions): ProcessState<T> {
         jobIdRef.current = null;
       }
     },
-    [pushToast, addRecentFile, tool, trackProgress],
+    [
+      pushToast,
+      addRecentFile,
+      beginJob,
+      updateJob,
+      finishJob,
+      tool,
+      trackProgress,
+    ],
   );
 
   const reset = useCallback(() => {
