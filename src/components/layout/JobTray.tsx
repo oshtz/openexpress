@@ -1,7 +1,23 @@
 import { useState } from "react";
-import { Activity, Check, ChevronUp, CircleX, Trash2, X } from "lucide-react";
+import {
+  Activity,
+  ArrowUpRight,
+  Check,
+  ChevronUp,
+  CircleX,
+  FolderOpen,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAppStore, type AppJob } from "../../stores/appStore";
+import { getDirName } from "../../lib/utils";
+
+async function openLocalPath(path: string): Promise<void> {
+  if (!("__TAURI_INTERNALS__" in window)) return;
+  const { open } = await import("@tauri-apps/plugin-shell");
+  await open(path);
+}
 
 function statusIcon(job: AppJob) {
   if (job.status === "running") return <Activity size={13} />;
@@ -28,10 +44,16 @@ export function JobTray() {
   const navigate = useNavigate();
   const jobs = useAppStore((state) => state.jobs);
   const clearFinishedJobs = useAppStore((state) => state.clearFinishedJobs);
+  const pushToast = useAppStore((state) => state.pushToast);
   if (jobs.length === 0) return null;
 
   const activeCount = jobs.filter((job) => job.status === "running").length;
   const latest = jobs.find((job) => job.status === "running") ?? jobs[0];
+  const openPath = (path: string) => {
+    void openLocalPath(path).catch((error) => {
+      pushToast("error", error instanceof Error ? error.message : String(error));
+    });
+  };
 
   return (
     <section
@@ -42,31 +64,57 @@ export function JobTray() {
       {expanded && (
         <div className="max-h-44 overflow-y-auto border-b border-border-subtle">
           {jobs.map((job) => (
-            <button
+            <div
               key={job.id}
-              type="button"
-              onClick={() => navigate(job.route)}
-              className="grid w-full grid-cols-[18px_minmax(0,1fr)_auto] items-center gap-2 border-b border-border-subtle px-4 py-2 text-left last:border-b-0 hover:bg-bg-tertiary"
+              className="flex items-center border-b border-border-subtle last:border-b-0 hover:bg-bg-tertiary"
             >
-              <span
-                className={job.status === "failed" ? "text-danger" : "text-text-secondary"}
+              <button
+                type="button"
+                onClick={() => navigate(job.route)}
+                className="grid min-w-0 flex-1 grid-cols-[18px_minmax(0,1fr)_auto] items-center gap-2 px-4 py-2 text-left"
               >
-                {statusIcon(job)}
-              </span>
-              <span className="min-w-0">
-                <span className="block truncate text-[12px] font-semibold text-text">
-                  {job.tool}
+                <span
+                  className={job.status === "failed" ? "text-danger" : "text-text-secondary"}
+                >
+                  {statusIcon(job)}
                 </span>
-                {job.inputName && (
-                  <span className="block truncate text-[10px] text-text-muted">
-                    {job.inputName}
+                <span className="min-w-0">
+                  <span className="block truncate text-[12px] font-semibold text-text">
+                    {job.tool}
                   </span>
-                )}
-              </span>
-              <span className="max-w-56 truncate font-mono text-[10px] text-text-secondary">
-                {jobSummary(job)}
-              </span>
-            </button>
+                  {job.inputName && (
+                    <span className="block truncate text-[10px] text-text-muted">
+                      {job.inputName}
+                    </span>
+                  )}
+                </span>
+                <span className="max-w-56 truncate font-mono text-[10px] text-text-secondary">
+                  {jobSummary(job)}
+                </span>
+              </button>
+              {job.status === "succeeded" && job.outputPath && (
+                <div className="flex shrink-0 items-center pr-2">
+                  <button
+                    type="button"
+                    title="Open output"
+                    aria-label={`Open ${job.tool} output`}
+                    onClick={() => openPath(job.outputPath!)}
+                    className="inline-flex h-8 w-8 items-center justify-center text-text-muted hover:text-text"
+                  >
+                    <ArrowUpRight size={13} />
+                  </button>
+                  <button
+                    type="button"
+                    title="Open containing folder"
+                    aria-label={`Open folder containing ${job.tool} output`}
+                    onClick={() => openPath(getDirName(job.outputPath!))}
+                    className="inline-flex h-8 w-8 items-center justify-center text-text-muted hover:text-text"
+                  >
+                    <FolderOpen size={13} />
+                  </button>
+                </div>
+              )}
+            </div>
           ))}
         </div>
       )}

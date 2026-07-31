@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type KeyboardEvent } from "react";
 import { ArrowUpRight, FileText, FolderOpen, RotateCcw, Search, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { FileDropzone } from "../components/common/FileDropzone";
 import { useAppStore } from "../stores/appStore";
 import { TOOLS, type ToolSpec } from "../lib/tools";
 import { getDirName } from "../lib/utils";
@@ -10,7 +11,6 @@ type Category = ToolSpec["category"];
 interface CategoryMeta {
   label: string;
   accent: string;
-  tagline: string;
 }
 
 const CATEGORIES: Category[] = ["image", "video", "pdf", "audio"];
@@ -19,24 +19,22 @@ const CAT_META: Record<Category, CategoryMeta> = {
   image: {
     label: "Image",
     accent: "var(--color-accent-gold)",
-    tagline: "Resize, crop, convert, adjust",
   },
   video: {
     label: "Video",
     accent: "var(--color-accent-steel)",
-    tagline: "Trim, transcode, condense",
   },
   pdf: {
     label: "PDF",
     accent: "var(--color-accent-signal)",
-    tagline: "Merge, compress, organize",
   },
   audio: {
     label: "Audio",
     accent: "var(--color-accent-sage)",
-    tagline: "Trim, fade, convert",
   },
 };
+
+const SUPPORTED_EXTENSIONS = [...new Set(TOOLS.flatMap((tool) => tool.extensions))];
 
 function groupByCategory(): Record<Category, ToolSpec[]> {
   const grouped: Record<Category, ToolSpec[]> = {
@@ -49,14 +47,33 @@ function groupByCategory(): Record<Category, ToolSpec[]> {
   return grouped;
 }
 
-function ToolRow({ tool, accent, onClick }: { tool: ToolSpec; accent: string; onClick: () => void }) {
+function ToolRow({
+  tool,
+  accent,
+  onClick,
+  displayLabel = tool.label,
+  optionId,
+  selected = false,
+}: {
+  tool: ToolSpec;
+  accent: string;
+  onClick: () => void;
+  displayLabel?: string;
+  optionId?: string;
+  selected?: boolean;
+}) {
   return (
     <button
+      id={optionId}
       type="button"
+      role={optionId ? "option" : undefined}
+      aria-selected={optionId ? selected : undefined}
       onClick={onClick}
-      className="group grid w-full grid-cols-12 items-baseline gap-4 border-b border-border-subtle px-1 py-3.5 text-left hover:bg-bg-tertiary"
+      className={`group grid w-full grid-cols-12 items-baseline gap-4 border-b border-border-subtle px-3 py-3.5 text-left hover:bg-bg-tertiary ${
+        selected ? "bg-bg-tertiary" : ""
+      }`}
     >
-      <span className="col-span-4 text-[15px] font-medium text-text">{tool.label}</span>
+      <span className="col-span-4 text-[15px] font-medium text-text">{displayLabel}</span>
       <span className="col-span-7 text-[13px] leading-snug text-text-secondary">
         {tool.description}
       </span>
@@ -81,6 +98,7 @@ export function Home() {
   const removeRecentFile = useAppStore((state) => state.removeRecentFile);
   const pushToast = useAppStore((state) => state.pushToast);
   const [query, setQuery] = useState("");
+  const [activeResult, setActiveResult] = useState(-1);
   const grouped = useMemo(() => groupByCategory(), []);
   const results = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -89,11 +107,28 @@ export function Home() {
       `${tool.label} ${tool.description} ${tool.category}`.toLowerCase().includes(normalized),
     );
   }, [query]);
+  const hasQuery = query.trim().length > 0;
 
   const openPath = (path: string) => {
     void openLocalPath(path).catch((error) => {
       pushToast("error", error instanceof Error ? error.message : String(error));
     });
+  };
+
+  const openTool = (tool: ToolSpec) => navigate(tool.route);
+
+  const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (results.length === 0) return;
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveResult((current) => (current + 1) % results.length);
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveResult((current) => (current <= 0 ? results.length - 1 : current - 1));
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      openTool(results[activeResult >= 0 ? activeResult : 0]);
+    }
   };
 
   return (
@@ -118,6 +153,23 @@ export function Home() {
         </div>
       </header>
 
+      <section className="mb-5" aria-labelledby="start-file-heading">
+        <div className="mb-2.5 flex items-baseline justify-between">
+          <h2 id="start-file-heading" className="text-[17px] font-bold uppercase text-text">
+            Start with a file
+          </h2>
+          <span className="swiss-label">Local only</span>
+        </div>
+        <FileDropzone
+          compact
+          accept={SUPPORTED_EXTENSIONS}
+          label="Drop a file to see compatible tools"
+          onFiles={([path]) => {
+            if (path) navigate(`/pick?file=${encodeURIComponent(path)}`);
+          }}
+        />
+      </section>
+
       <section className="mb-5" aria-label="Find a tool">
         <label className="sr-only" htmlFor="tool-search">
           Find a tool
@@ -126,16 +178,30 @@ export function Home() {
           <Search size={15} className="mr-3 shrink-0 text-text-muted" />
           <input
             id="tool-search"
-            type="search"
+            type="text"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded={hasQuery}
+            aria-controls={hasQuery ? "tool-search-results" : undefined}
+            aria-activedescendant={
+              activeResult >= 0 ? `tool-search-result-${results[activeResult]?.id}` : undefined
+            }
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setActiveResult(-1);
+            }}
+            onKeyDown={handleSearchKeyDown}
             placeholder="Find a tool by action or file type"
             className="h-full min-w-0 flex-1 bg-transparent text-[13px] text-text outline-none placeholder:text-text-muted"
           />
           {query && (
             <button
               type="button"
-              onClick={() => setQuery("")}
+              onClick={() => {
+                setQuery("");
+                setActiveResult(-1);
+              }}
               className="px-2 text-[11px] font-semibold uppercase text-text-muted hover:text-text"
             >
               Clear
@@ -143,67 +209,38 @@ export function Home() {
           )}
         </div>
 
-        {query.trim() && (
+        <p role="status" className="sr-only">
+          {hasQuery
+            ? `${results.length} matching ${results.length === 1 ? "tool" : "tools"}`
+            : ""}
+        </p>
+
+        {hasQuery && (
           <div className="border-x border-b border-border bg-bg-secondary">
-            {results.length > 0 ? (
-              results.map((tool) => (
+            <div className="border-b border-border-subtle px-3 py-2 font-mono text-[10px] uppercase text-text-muted">
+              {results.length} {results.length === 1 ? "result" : "results"}
+            </div>
+            <div id="tool-search-results" role="listbox">
+              {results.map((tool, index) => (
                 <ToolRow
                   key={tool.id}
                   tool={tool}
+                  optionId={`tool-search-result-${tool.id}`}
+                  selected={index === activeResult}
+                  displayLabel={`${tool.label} ${CAT_META[tool.category].label}`}
                   accent={CAT_META[tool.category].accent}
-                  onClick={() => navigate(tool.route)}
+                  onClick={() => openTool(tool)}
                 />
-              ))
-            ) : (
+              ))}
+            </div>
+            {results.length === 0 && (
               <p className="px-4 py-4 text-[13px] text-text-muted">No matching tools.</p>
             )}
           </div>
         )}
       </section>
 
-      <nav
-        className="mb-7 grid grid-cols-4 border border-border bg-bg-secondary"
-        aria-label="Tool categories"
-      >
-        {CATEGORIES.map((category, index) => {
-          const meta = CAT_META[category];
-          const items = grouped[category];
-          return (
-            <button
-              key={category}
-              type="button"
-              onClick={() =>
-                document.getElementById(`section-${category}`)?.scrollIntoView({
-                  behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-                    ? "auto"
-                    : "smooth",
-                  block: "start",
-                })
-              }
-              className={`min-h-[86px] px-4 py-3 text-left hover:bg-bg-tertiary ${
-                index > 0 ? "border-l border-border" : ""
-              }`}
-            >
-              <span className="flex items-center justify-between">
-                <span className="text-[12px] font-bold uppercase text-text">{meta.label}</span>
-                <span
-                  className="h-2.5 w-2.5"
-                  style={{ background: meta.accent }}
-                  aria-hidden="true"
-                />
-              </span>
-              <span className="mt-2 block text-[11px] leading-snug text-text-secondary">
-                {meta.tagline}
-              </span>
-              <span className="mt-1 block font-mono text-[10px] text-text-muted">
-                {items.length} {items.length === 1 ? "tool" : "tools"}
-              </span>
-            </button>
-          );
-        })}
-      </nav>
-
-      {recentFiles.length > 0 && (
+      {!hasQuery && recentFiles.length > 0 && (
         <section className="animate-fade-in-up mb-8" aria-labelledby="recent-heading">
           <div className="flex items-baseline justify-between border-b border-border pb-2.5">
             <h2 id="recent-heading" className="text-[17px] font-bold uppercase text-text">
@@ -272,41 +309,45 @@ export function Home() {
         </section>
       )}
 
-      <div className="animate-fade-in-up mb-3 flex items-baseline justify-between">
-        <span className="swiss-label">All tools</span>
-      </div>
+      {!hasQuery && (
+        <>
+          <div className="animate-fade-in-up mb-3 flex items-baseline justify-between">
+            <span className="swiss-label">All tools</span>
+          </div>
 
-      {CATEGORIES.map((category) => {
-        const meta = CAT_META[category];
-        const items = grouped[category];
-        return (
-          <section
-            key={category}
-            id={`section-${category}`}
-            className="animate-fade-in-up mb-10 scroll-mt-6"
-          >
-            <div className="flex items-baseline justify-between border-b border-border pb-3">
-              <div className="flex items-baseline gap-3">
-                <span
-                  className="inline-block h-2.5 w-2.5"
-                  style={{ background: meta.accent }}
-                  aria-hidden="true"
-                />
-                <h2 className="text-[22px] font-bold uppercase text-text">{meta.label}</h2>
-              </div>
-              <span className="swiss-label">{items.length}</span>
-            </div>
-            {items.map((tool) => (
-              <ToolRow
-                key={tool.id}
-                tool={tool}
-                accent={meta.accent}
-                onClick={() => navigate(tool.route)}
-              />
-            ))}
-          </section>
-        );
-      })}
+          {CATEGORIES.map((category) => {
+            const meta = CAT_META[category];
+            const items = grouped[category];
+            return (
+              <section
+                key={category}
+                id={`section-${category}`}
+                className="animate-fade-in-up mb-10 scroll-mt-6"
+              >
+                <div className="flex items-baseline justify-between border-b border-border pb-3">
+                  <div className="flex items-baseline gap-3">
+                    <span
+                      className="inline-block h-2.5 w-2.5"
+                      style={{ background: meta.accent }}
+                      aria-hidden="true"
+                    />
+                    <h2 className="text-[22px] font-bold uppercase text-text">{meta.label}</h2>
+                  </div>
+                  <span className="swiss-label">{items.length}</span>
+                </div>
+                {items.map((tool) => (
+                  <ToolRow
+                    key={tool.id}
+                    tool={tool}
+                    accent={meta.accent}
+                    onClick={() => openTool(tool)}
+                  />
+                ))}
+              </section>
+            );
+          })}
+        </>
+      )}
     </div>
   );
 }

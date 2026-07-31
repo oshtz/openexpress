@@ -124,7 +124,7 @@ export function useProcess<T>(options?: ProcessOptions): ProcessState<T> {
             sourcePath: inputPath,
           });
         }
-        updateJob(jobId, { completed: 1 });
+        updateJob(jobId, { completed: 1, outputPath });
         finishJob(jobId, "succeeded");
         return res;
       } catch (rawErr) {

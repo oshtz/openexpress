@@ -54,6 +54,7 @@ test.describe("tool route smoke", () => {
       await expect(page.getByText(/01\s*Input/i)).toBeVisible();
       await expect(page.getByText(/02\s*Settings/i)).toBeVisible();
       await expect(page.getByText(/drop .*here|drop files here/i).first()).toBeVisible();
+      await expect(page.getByText("Choose a file to continue")).toBeVisible();
       await expect(page.getByRole("button", { name: tool.action }).last()).toBeDisabled();
     });
   }
@@ -63,11 +64,12 @@ test("31 tool routes are covered", () => {
   expect(TOOL_ROUTES).toHaveLength(31);
 });
 
-test("home exposes the four top-level tool categories", async ({ page }) => {
+test("home starts from a file and keeps the full tool catalog available", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: /edit media/i })).toBeVisible();
-  await expect(page.getByRole("button", { name: /image/i }).first()).toBeVisible();
-  await expect(page.getByRole("button", { name: /video/i }).first()).toBeVisible();
-  await expect(page.getByRole("button", { name: /pdf/i }).first()).toBeVisible();
-  await expect(page.getByRole("button", { name: /audio/i }).first()).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Drop a file to see compatible tools" }),
+  ).toBeVisible();
+  await expect(page.getByText("All tools")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Image" })).toBeVisible();
 });

@@ -20,7 +20,7 @@ describe("ToolPage", () => {
         description="Reduce image file size locally."
         icon={<Settings />}
         upload={<div>Upload target</div>}
-        controls={<button disabled>Compress</button>}
+        controls={<button>Compress</button>}
       >
         <ProgressBar percent={42} label="Compressing" />
         <ErrorPanel error={{ kind: "Internal", message: "Could not compress" }} />
@@ -32,10 +32,13 @@ describe("ToolPage", () => {
     expect(screen.getByText("Input")).toBeInTheDocument();
     expect(screen.getByText("Settings")).toBeInTheDocument();
     expect(screen.getByText("Upload target")).toBeInTheDocument();
+    expect(screen.getByText("Choose a file to continue")).toBeVisible();
     expect(screen.getByRole("button", { name: "Compress" })).toBeDisabled();
+    expect(screen.getByText("03")).toBeVisible();
     expect(screen.getByText("Compressing")).toBeInTheDocument();
     expect(screen.getByText("42%")).toBeInTheDocument();
     expect(screen.getByText("Could not compress")).toBeInTheDocument();
+    expect(screen.getByText("04")).toBeVisible();
     expect(screen.getByText("C:/tmp/output.jpg")).toBeInTheDocument();
   });
 
@@ -59,6 +62,8 @@ describe("ToolPage", () => {
 
     expect(screen.queryByText("Upload target")).not.toBeInTheDocument();
     expect(screen.getByText("Selected preview")).toBeInTheDocument();
+    expect(screen.getByText("Ready to process")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Run" })).toBeEnabled();
 
     await user.click(screen.getByRole("button", { name: /clear/i }));
     expect(onClear).toHaveBeenCalledTimes(1);

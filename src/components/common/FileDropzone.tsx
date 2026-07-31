@@ -15,6 +15,7 @@ interface FileDropzoneProps {
   selectedPaths?: string[];
   onFiles: (paths: string[]) => void;
   label?: string;
+  compact?: boolean;
 }
 
 function extensionOf(path: string): string {
@@ -28,6 +29,7 @@ export function FileDropzone({
   selectedPaths = [],
   onFiles,
   label = "Drop files here or click to browse",
+  compact = false,
 }: FileDropzoneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const acceptRef = useRef(accept);
@@ -195,11 +197,15 @@ export function FileDropzone({
           }
         }}
         className={`relative flex cursor-pointer items-center justify-center transition-colors ${
-          multiple && selectedPaths.length > 0 ? "min-h-[180px]" : "min-h-[272px]"
+          compact
+            ? "min-h-[184px]"
+            : multiple && selectedPaths.length > 0
+              ? "min-h-[180px]"
+              : "min-h-[272px]"
         }`}
         style={{
           border: `1px ${isDragging ? "solid" : "dashed"} ${borderColor}`,
-          padding: "40px 32px",
+          padding: compact ? "24px 28px" : "40px 32px",
           background: isDragging
             ? "var(--color-accent-light)"
             : hasFile
@@ -236,12 +242,12 @@ export function FileDropzone({
               <div
                 aria-hidden
                 className="numeral-outline select-none"
-                style={{ fontSize: 64, lineHeight: 0.85 }}
+                style={{ fontSize: compact ? 48 : 64, lineHeight: 0.85 }}
               >
                 +
               </div>
               <p
-                className="mt-5"
+                className={compact ? "mt-3" : "mt-5"}
                 style={{
                   fontSize: 16,
                   fontWeight: 600,

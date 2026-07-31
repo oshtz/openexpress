@@ -24,6 +24,7 @@ export interface AppJob {
   completed: number;
   failed: number;
   progress: number | null;
+  outputPath?: string;
   message?: string;
 }
 

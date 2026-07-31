@@ -39,6 +39,7 @@ describe("useProcess jobs", () => {
       status: "succeeded",
       completed: 1,
       failed: 0,
+      outputPath: "C:\\Exports\\photo-resized.png",
     });
     expect(recentFiles[0]).toMatchObject({
       path: "C:\\Exports\\photo-resized.png",

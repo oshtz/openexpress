@@ -34,22 +34,28 @@ export function ResultPanel({ outputPath, stats, onOpenFolder }: ResultPanelProp
         padding: "20px 24px",
       }}
     >
-      <div className="flex items-center gap-3 mb-4">
+      <div className="mb-4 flex items-center gap-3">
         <Check
           size={16}
           strokeWidth={2}
           style={{ color: "var(--color-accent-gold)" }}
         />
-        <span
-          style={{
-            fontSize: 15,
-            fontWeight: 700,
-            letterSpacing: "0.02em",
-            color: "var(--color-text)",
-          }}
-        >
-          Done
-        </span>
+        <div>
+          <div className="swiss-label">
+            <span className="mr-2 font-mono">04</span>
+            Result
+          </div>
+          <span
+            style={{
+              fontSize: 15,
+              fontWeight: 700,
+              letterSpacing: "0.02em",
+              color: "var(--color-text)",
+            }}
+          >
+            Done
+          </span>
+        </div>
       </div>
 
       <p

@@ -67,6 +67,7 @@ export function useBatch<I, R>(): BatchHandle<I, R> {
       const first = items[0];
       let failures = 0;
       let completedItems = 0;
+      let outputPath: string | undefined;
       beginJob({
         id: jobId,
         tool: `${toolForRoute(route)?.label ?? "Batch"} batch`,
@@ -97,6 +98,15 @@ export function useBatch<I, R>(): BatchHandle<I, R> {
         try {
           const result = await run(item);
           outcome = { item, result, error: null };
+          if (!outputPath && typeof result === "object" && result !== null) {
+            const output = result as { output_path?: unknown; output_paths?: unknown };
+            outputPath =
+              typeof output.output_path === "string"
+                ? output.output_path
+                : Array.isArray(output.output_paths)
+                  ? output.output_paths.find((path): path is string => typeof path === "string")
+                  : undefined;
+          }
         } catch (e) {
           outcome = { item, result: null, error: toAppError(e) };
           failures += 1;
@@ -107,6 +117,7 @@ export function useBatch<I, R>(): BatchHandle<I, R> {
           completed,
           failed: failures,
           progress: items.length > 0 ? (completed / items.length) * 100 : 100,
+          outputPath,
         });
         completedItems = completed;
         setState((s) => ({

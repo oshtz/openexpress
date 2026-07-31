@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { Settings } from "lucide-react";
+import { ArrowRight, ChevronDown, Settings } from "lucide-react";
 import { TOOLS, type ToolSpec } from "../../lib/tools";
 
 type Category = ToolSpec["category"];
@@ -26,16 +26,22 @@ const sections: NavSection[] = CATEGORIES.map((meta) => ({
 
 export function Sidebar() {
   const location = useLocation();
-  const [expanded, setExpanded] = useState<Record<string, boolean>>(() => {
-    const initial: Record<string, boolean> = {};
-    for (const section of sections) {
-      initial[section.category] = location.pathname.startsWith(`/${section.category}/`);
-    }
-    return initial;
+  const [expanded, setExpanded] = useState<Partial<Record<Category, boolean>>>(() => {
+    const active = sections.find((section) =>
+      location.pathname.startsWith(`/${section.category}/`),
+    );
+    return active ? { [active.category]: true } : {};
   });
 
   const toggle = (category: Category) =>
-    setExpanded((prev) => ({ ...prev, [category]: !prev[category] }));
+    setExpanded((current) => ({
+      ...current,
+      [category]:
+        !(current[category] ?? location.pathname.startsWith(`/${category}/`)),
+    }));
+
+  const isSectionExpanded = (category: Category) =>
+    expanded[category] ?? location.pathname.startsWith(`/${category}/`);
 
   return (
     <aside
@@ -69,8 +75,9 @@ export function Sidebar() {
             className={sIdx > 0 ? "border-t border-sidebar-border" : ""}
           >
             <button
+              type="button"
               onClick={() => toggle(section.category)}
-              aria-expanded={!!expanded[section.category]}
+              aria-expanded={isSectionExpanded(section.category)}
               aria-controls={`nav-section-${section.category}`}
               className="w-full flex items-center gap-3 px-5 py-3 hover:bg-sidebar-hover transition-colors"
             >
@@ -104,23 +111,20 @@ export function Sidebar() {
               >
                 {String(section.items.length).padStart(2, "0")}
               </span>
-              <span
+              <ChevronDown
                 aria-hidden
+                size={14}
                 style={{
-                  fontSize: 14,
                   color: "var(--color-sidebar-text)",
-                  width: 12,
-                  textAlign: "center",
-                  display: "inline-block",
-                  transform: expanded[section.category] ? "rotate(0)" : "rotate(-90deg)",
+                  transform: isSectionExpanded(section.category)
+                    ? "rotate(0)"
+                    : "rotate(-90deg)",
                   transition: "transform 100ms linear",
                 }}
-              >
-                v
-              </span>
+              />
             </button>
 
-            {expanded[section.category] && (
+            {isSectionExpanded(section.category) && (
               <div
                 className="mb-3"
                 id={`nav-section-${section.category}`}
@@ -138,6 +142,9 @@ export function Sidebar() {
                         isActive ? "bg-sidebar-hover" : "hover:bg-sidebar-hover"
                       }`
                     }
+                    style={({ isActive }) => ({
+                      boxShadow: isActive ? `inset -3px 0 ${section.accent}` : undefined,
+                    })}
                   >
                     {({ isActive }) => (
                       <>
@@ -153,16 +160,14 @@ export function Sidebar() {
                           {item.label}
                         </span>
                         {isActive && (
-                          <span
+                          <ArrowRight
+                            aria-hidden
+                            size={13}
                             style={{
                               marginLeft: "auto",
                               color: section.accent,
-                              fontSize: 14,
-                              lineHeight: 1,
                             }}
-                          >
-                            -&gt;
-                          </span>
+                          />
                         )}
                       </>
                     )}
