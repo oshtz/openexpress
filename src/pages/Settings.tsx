@@ -37,7 +37,7 @@ export function Settings() {
                   color: active ? "var(--color-bg-secondary)" : "var(--color-text-secondary)",
                   fontSize: 11,
                   fontWeight: 600,
-                  letterSpacing: "0.08em",
+                  letterSpacing: 0,
                   textTransform: "uppercase",
                 }}
               >

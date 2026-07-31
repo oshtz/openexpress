@@ -72,8 +72,8 @@ export function PickTool() {
           className="swiss-display break-all mt-2"
           style={{
             fontWeight: 700,
-            fontSize: "clamp(1.6rem, 3vw, 2.4rem)",
-            letterSpacing: "-0.025em",
+            fontSize: 32,
+            letterSpacing: 0,
             lineHeight: 1.05,
             color: "var(--color-text)",
           }}
@@ -113,7 +113,7 @@ export function PickTool() {
                   style={{
                     fontWeight: 700,
                     fontSize: 16,
-                    letterSpacing: "-0.01em",
+                    letterSpacing: 0,
                     textTransform: "uppercase",
                     color: "var(--color-text)",
                   }}

@@ -130,10 +130,14 @@ body {
 }
 
 /* ── Transitions — Swiss permits minimal opacity/bg fades only ──────── */
-*, *::before, *::after {
-  transition-property: color, background-color, border-color, opacity;
-  transition-timing-function: linear;
+.press-feedback {
+  transition-property: color, background-color, border-color, opacity, transform;
   transition-duration: 100ms;
+  transition-timing-function: ease-out;
+}
+
+.press-feedback:active {
+  transform: scale(0.985);
 }
 
 /* ── Focus — 1px ink outline, no glow ───────────────────────────────── */
@@ -208,7 +212,7 @@ body {
   color: transparent;
   -webkit-text-stroke: 1.5px var(--color-text);
   font-weight: 400;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   line-height: 0.85;
 }
 
@@ -229,7 +233,7 @@ body {
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   color: var(--color-text-secondary);
 }
 
@@ -242,7 +246,7 @@ body {
   font-weight: 700;
   font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   border: none;
   background: transparent;
   border-bottom: 1px solid var(--color-text);

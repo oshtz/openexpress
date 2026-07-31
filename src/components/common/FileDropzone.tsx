@@ -198,14 +198,14 @@ export function FileDropzone({
         }}
         className={`relative flex cursor-pointer items-center justify-center transition-colors ${
           compact
-            ? "min-h-[184px]"
+            ? "min-h-[144px]"
             : multiple && selectedPaths.length > 0
               ? "min-h-[180px]"
-              : "min-h-[272px]"
+              : "min-h-[240px]"
         }`}
         style={{
           border: `1px ${isDragging ? "solid" : "dashed"} ${borderColor}`,
-          padding: compact ? "24px 28px" : "40px 32px",
+          padding: compact ? "18px 24px" : "32px 28px",
           background: isDragging
             ? "var(--color-accent-light)"
             : hasFile
@@ -242,27 +242,33 @@ export function FileDropzone({
               <div
                 aria-hidden
                 className="numeral-outline select-none"
-                style={{ fontSize: compact ? 48 : 64, lineHeight: 0.85 }}
+                style={{ fontSize: compact ? 40 : 58, lineHeight: 0.85 }}
               >
                 +
               </div>
               <p
-                className={compact ? "mt-3" : "mt-5"}
+                className={compact ? "mt-2" : "mt-4"}
                 style={{
-                  fontSize: 16,
+                  fontSize: compact ? 15 : 16,
                   fontWeight: 600,
                   color: "var(--color-text)",
                 }}
               >
                 {label}
               </p>
-              <p className="mt-2 text-[12px] text-text-secondary">
-                Or press Ctrl/Cmd+O to choose from disk
-                {acceptsImages && " · Ctrl/Cmd+V to paste an image"}
+              <p className="mt-1.5 text-[12px] text-text-secondary">
+                {compact
+                  ? "Click to browse or press Ctrl/Cmd+O"
+                  : "Or press Ctrl/Cmd+O to choose from disk"}
+                {!compact && acceptsImages && " / Ctrl/Cmd+V to paste an image"}
               </p>
               {accept && (
-                <p className="mt-5 max-w-[520px] font-mono text-[10px] uppercase tracking-[0.08em] text-text-muted">
-                  {accept.map((a) => `.${a}`).join(" · ")}
+                <p
+                  className={`${compact ? "mt-2" : "mt-4"} max-w-[520px] font-mono text-[10px] uppercase text-text-muted`}
+                >
+                  {compact
+                    ? "Images / Video / Audio / PDF"
+                    : accept.map((a) => `.${a}`).join(" / ")}
                 </p>
               )}
             </>

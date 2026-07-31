@@ -31,7 +31,7 @@ export function Button({
     <button
       type={type}
       disabled={disabled}
-      className={`${fullWidth ? "w-full " : ""}inline-flex items-center justify-center gap-2 px-4 py-2.5 text-[12px] font-bold uppercase tracking-[0.06em] transition-colors ${
+      className={`${fullWidth ? "w-full " : ""}press-feedback inline-flex items-center justify-center gap-2 px-4 py-2.5 text-[12px] font-bold uppercase ${
         disabled ? DISABLED : VARIANTS[variant]
       } ${className}`}
       {...rest}

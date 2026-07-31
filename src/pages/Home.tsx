@@ -1,5 +1,5 @@
 import { useMemo, useState, type KeyboardEvent } from "react";
-import { ArrowUpRight, FileText, FolderOpen, RotateCcw, Search, Trash2 } from "lucide-react";
+import { ArrowUpRight, FileText, FolderOpen, RotateCcw, Search, Trash2, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { FileDropzone } from "../components/common/FileDropzone";
 import { useAppStore } from "../stores/appStore";
@@ -69,17 +69,17 @@ function ToolRow({
       role={optionId ? "option" : undefined}
       aria-selected={optionId ? selected : undefined}
       onClick={onClick}
-      className={`group grid w-full grid-cols-12 items-baseline gap-4 border-b border-border-subtle px-3 py-3.5 text-left hover:bg-bg-tertiary ${
+      className={`press-feedback group grid min-h-11 w-full grid-cols-12 items-center gap-4 border-b border-border-subtle px-3 py-2.5 text-left hover:bg-bg-tertiary ${
         selected ? "bg-bg-tertiary" : ""
       }`}
     >
-      <span className="col-span-4 text-[15px] font-medium text-text">{displayLabel}</span>
+      <span className="col-span-4 text-[14px] font-medium text-text">{displayLabel}</span>
       <span className="col-span-7 text-[13px] leading-snug text-text-secondary">
         {tool.description}
       </span>
       <ArrowUpRight
         size={15}
-        className="col-span-1 ml-auto transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+        className="col-span-1 ml-auto"
         style={{ color: accent }}
       />
     </button>
@@ -133,29 +133,29 @@ export function Home() {
 
   return (
     <div>
-      <header className="animate-fade-in-up mb-5 grid grid-cols-12 gap-6 border-b border-border pb-5">
+      <header className="animate-fade-in-up mb-4 grid grid-cols-12 gap-5 border-b border-border pb-4">
         <div className="col-span-9">
           <h1
-            className="text-[42px] font-bold uppercase leading-[0.92] text-text"
+            className="text-[38px] font-bold uppercase leading-none text-text"
             style={{ fontFamily: "var(--font-display)", letterSpacing: 0 }}
           >
             Edit media. Locally.
           </h1>
-          <p className="mt-3 max-w-[66ch] text-[13px] leading-relaxed text-text-secondary">
+          <p className="mt-2 max-w-[66ch] text-[13px] leading-normal text-text-secondary">
             Private desktop tools for image, video, audio, and PDF. No cloud round-trip.
           </p>
         </div>
-        <div className="col-span-3 border-l border-border pl-5">
+        <div className="col-span-3 border-l border-border pl-4">
           <div className="swiss-label">Available</div>
-          <div className="mt-1 font-mono text-[30px] leading-none text-text">
+          <div className="mt-1 font-mono text-[26px] leading-none text-text">
             {String(TOOLS.length).padStart(2, "0")}
           </div>
         </div>
       </header>
 
-      <section className="mb-5" aria-labelledby="start-file-heading">
-        <div className="mb-2.5 flex items-baseline justify-between">
-          <h2 id="start-file-heading" className="text-[17px] font-bold uppercase text-text">
+      <section className="mb-4" aria-labelledby="start-file-heading">
+        <div className="mb-2 flex items-baseline justify-between">
+          <h2 id="start-file-heading" className="text-[16px] font-bold uppercase text-text">
             Start with a file
           </h2>
           <span className="swiss-label">Local only</span>
@@ -170,11 +170,11 @@ export function Home() {
         />
       </section>
 
-      <section className="mb-5" aria-label="Find a tool">
+      <section className="mb-4" aria-label="Find a tool">
         <label className="sr-only" htmlFor="tool-search">
           Find a tool
         </label>
-        <div className="flex h-11 items-center border border-border bg-bg-secondary px-3 focus-within:border-text">
+        <div className="flex h-10 items-center border border-border bg-bg-secondary px-3 focus-within:border-text">
           <Search size={15} className="mr-3 shrink-0 text-text-muted" />
           <input
             id="tool-search"
@@ -202,9 +202,11 @@ export function Home() {
                 setQuery("");
                 setActiveResult(-1);
               }}
-              className="px-2 text-[11px] font-semibold uppercase text-text-muted hover:text-text"
+              title="Clear search"
+              aria-label="Clear search"
+              className="press-feedback inline-flex h-8 w-8 items-center justify-center text-text-muted hover:text-text"
             >
-              Clear
+              <X size={14} />
             </button>
           )}
         </div>
@@ -217,7 +219,7 @@ export function Home() {
 
         {hasQuery && (
           <div className="border-x border-b border-border bg-bg-secondary">
-            <div className="border-b border-border-subtle px-3 py-2 font-mono text-[10px] uppercase text-text-muted">
+            <div className="border-b border-border-subtle px-3 py-1.5 font-mono text-[10px] uppercase text-text-muted">
               {results.length} {results.length === 1 ? "result" : "results"}
             </div>
             <div id="tool-search-results" role="listbox">
@@ -241,7 +243,7 @@ export function Home() {
       </section>
 
       {!hasQuery && recentFiles.length > 0 && (
-        <section className="animate-fade-in-up mb-8" aria-labelledby="recent-heading">
+        <section className="animate-fade-in-up mb-6" aria-labelledby="recent-heading">
           <div className="flex items-baseline justify-between border-b border-border pb-2.5">
             <h2 id="recent-heading" className="text-[17px] font-bold uppercase text-text">
               Recent outputs
@@ -322,16 +324,16 @@ export function Home() {
               <section
                 key={category}
                 id={`section-${category}`}
-                className="animate-fade-in-up mb-10 scroll-mt-6"
+                className="animate-fade-in-up mb-7 scroll-mt-6"
               >
-                <div className="flex items-baseline justify-between border-b border-border pb-3">
+                <div className="flex items-baseline justify-between border-b border-border pb-2">
                   <div className="flex items-baseline gap-3">
                     <span
                       className="inline-block h-2.5 w-2.5"
                       style={{ background: meta.accent }}
                       aria-hidden="true"
                     />
-                    <h2 className="text-[22px] font-bold uppercase text-text">{meta.label}</h2>
+                    <h2 className="text-[20px] font-bold uppercase text-text">{meta.label}</h2>
                   </div>
                   <span className="swiss-label">{items.length}</span>
                 </div>

@@ -49,7 +49,7 @@ export function ResultPanel({ outputPath, stats, onOpenFolder }: ResultPanelProp
             style={{
               fontSize: 15,
               fontWeight: 700,
-              letterSpacing: "0.02em",
+              letterSpacing: 0,
               color: "var(--color-text)",
             }}
           >
@@ -81,7 +81,7 @@ export function ResultPanel({ outputPath, stats, onOpenFolder }: ResultPanelProp
                 style={{
                   fontSize: 11,
                   fontWeight: 600,
-                  letterSpacing: "0.08em",
+                  letterSpacing: 0,
                   textTransform: "uppercase",
                   color: "var(--color-text-muted)",
                 }}

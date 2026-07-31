@@ -113,10 +113,10 @@ export function BeforeAfter({ beforePath, afterPath, cacheBuster }: BeforeAfterP
       </div>
 
       {/* Labels */}
-      <div className="absolute top-3 left-3 px-2 py-0.5 bg-black/60 text-white text-[10px] font-medium tracking-wide uppercase pointer-events-none">
+      <div className="absolute top-3 left-3 px-2 py-0.5 bg-black/60 text-white text-[10px] font-medium uppercase pointer-events-none">
         Before
       </div>
-      <div className="absolute top-3 right-3 px-2 py-0.5 bg-black/60 text-white text-[10px] font-medium tracking-wide uppercase pointer-events-none">
+      <div className="absolute top-3 right-3 px-2 py-0.5 bg-black/60 text-white text-[10px] font-medium uppercase pointer-events-none">
         After
       </div>
     </div>

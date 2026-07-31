@@ -17,8 +17,8 @@ export function Layout() {
         <Sidebar />
         <div className="flex min-w-0 flex-1 flex-col">
           <main className="flex-1 overflow-y-auto">
-            {/* Swiss "page" wrapper — hairline left/right rules, generous gutter. */}
-            <div className="max-w-[1440px] mx-auto px-8 py-10 border-l border-r border-border-subtle min-h-full">
+            {/* Swiss "page" wrapper — hairline left/right rules, consistent gutter. */}
+            <div className="max-w-[1440px] mx-auto min-h-full border-l border-r border-border-subtle px-7 py-8">
               <ErrorBoundary>
                 <Outlet />
               </ErrorBoundary>

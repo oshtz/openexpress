@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { ArrowRight, ChevronDown, Settings } from "lucide-react";
+import { ChevronDown, Settings } from "lucide-react";
 import { TOOLS, type ToolSpec } from "../../lib/tools";
 
 type Category = ToolSpec["category"];
@@ -45,7 +45,7 @@ export function Sidebar() {
 
   return (
     <aside
-      className="w-[240px] flex flex-col shrink-0 select-none border-r border-sidebar-border"
+      className="flex w-[220px] shrink-0 select-none flex-col border-r border-sidebar-border"
       style={{
         background: "var(--color-sidebar-bg)",
         color: "var(--color-sidebar-active)",
@@ -54,13 +54,13 @@ export function Sidebar() {
       <NavLink
         to="/"
         aria-label="OpenExpress home"
-        className="block px-5 pt-6 pb-6 border-b border-sidebar-border"
+        className="press-feedback block border-b border-sidebar-border px-4 py-5"
       >
         <div
           aria-hidden="true"
           className="w-full"
           style={{
-            height: 58,
+            height: 50,
             background: "var(--color-sidebar-active)",
             WebkitMask: "url('/openexpress-logo.svg') center / contain no-repeat",
             mask: "url('/openexpress-logo.svg') center / contain no-repeat",
@@ -68,7 +68,7 @@ export function Sidebar() {
         />
       </NavLink>
 
-      <nav className="flex-1 overflow-y-auto py-4">
+      <nav className="flex-1 overflow-y-auto py-3">
         {sections.map((section, sIdx) => (
           <div
             key={section.category}
@@ -79,7 +79,7 @@ export function Sidebar() {
               onClick={() => toggle(section.category)}
               aria-expanded={isSectionExpanded(section.category)}
               aria-controls={`nav-section-${section.category}`}
-              className="w-full flex items-center gap-3 px-5 py-3 hover:bg-sidebar-hover transition-colors"
+              className="press-feedback flex w-full items-center gap-2.5 px-4 py-2.5 hover:bg-sidebar-hover"
             >
               <span
                 style={{
@@ -94,7 +94,7 @@ export function Sidebar() {
                 style={{
                   fontSize: 13,
                   fontWeight: 700,
-                  letterSpacing: "0.08em",
+                  letterSpacing: 0,
                   textTransform: "uppercase",
                   color: "var(--color-sidebar-active)",
                 }}
@@ -119,14 +119,14 @@ export function Sidebar() {
                   transform: isSectionExpanded(section.category)
                     ? "rotate(0)"
                     : "rotate(-90deg)",
-                  transition: "transform 100ms linear",
+                  transition: "transform 140ms ease-out",
                 }}
               />
             </button>
 
             {isSectionExpanded(section.category) && (
               <div
-                className="mb-3"
+                className="mb-2"
                 id={`nav-section-${section.category}`}
                 style={{
                   marginLeft: 23,
@@ -138,7 +138,7 @@ export function Sidebar() {
                     key={item.route}
                     to={item.route}
                     className={({ isActive }) =>
-                      `flex items-baseline gap-3 pl-4 pr-5 py-1.5 transition-colors ${
+                      `press-feedback flex items-baseline gap-3 py-1.5 pl-4 pr-4 ${
                         isActive ? "bg-sidebar-hover" : "hover:bg-sidebar-hover"
                       }`
                     }
@@ -147,29 +147,17 @@ export function Sidebar() {
                     })}
                   >
                     {({ isActive }) => (
-                      <>
-                        <span
-                          style={{
-                            fontSize: 13,
-                            fontWeight: isActive ? 700 : 400,
-                            color: isActive
-                              ? "var(--color-sidebar-active)"
-                              : "var(--color-sidebar-text)",
-                          }}
-                        >
-                          {item.label}
-                        </span>
-                        {isActive && (
-                          <ArrowRight
-                            aria-hidden
-                            size={13}
-                            style={{
-                              marginLeft: "auto",
-                              color: section.accent,
-                            }}
-                          />
-                        )}
-                      </>
+                      <span
+                        style={{
+                          fontSize: 13,
+                          fontWeight: isActive ? 700 : 400,
+                          color: isActive
+                            ? "var(--color-sidebar-active)"
+                            : "var(--color-sidebar-text)",
+                        }}
+                      >
+                        {item.label}
+                      </span>
                     )}
                   </NavLink>
                 ))}
@@ -183,7 +171,7 @@ export function Sidebar() {
         <NavLink
           to="/settings"
           className={({ isActive }) =>
-            `flex items-center gap-3 px-5 py-4 hover:bg-sidebar-hover transition-colors ${
+            `press-feedback flex items-center gap-3 px-4 py-3 hover:bg-sidebar-hover ${
               isActive ? "bg-sidebar-hover" : ""
             }`
           }
@@ -194,7 +182,7 @@ export function Sidebar() {
               <span
                 style={{
                   fontSize: 11,
-                  letterSpacing: "0.1em",
+                  letterSpacing: 0,
                   textTransform: "uppercase",
                   fontWeight: isActive ? 700 : 600,
                   color: isActive

@@ -71,7 +71,7 @@ export function JobTray() {
               <button
                 type="button"
                 onClick={() => navigate(job.route)}
-                className="grid min-w-0 flex-1 grid-cols-[18px_minmax(0,1fr)_auto] items-center gap-2 px-4 py-2 text-left"
+                className="press-feedback grid min-w-0 flex-1 grid-cols-[18px_minmax(0,1fr)_auto] items-center gap-2 px-4 py-1.5 text-left"
               >
                 <span
                   className={job.status === "failed" ? "text-danger" : "text-text-secondary"}
@@ -119,7 +119,7 @@ export function JobTray() {
         </div>
       )}
 
-      <div className="flex h-10 items-center gap-3 px-4">
+      <div className="flex h-9 items-center gap-3 px-4">
         <Activity
           size={14}
           className={activeCount > 0 ? "text-accent-signal" : "text-text-muted"}
@@ -127,7 +127,7 @@ export function JobTray() {
         <button
           type="button"
           onClick={() => setExpanded((value) => !value)}
-          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+          className="press-feedback flex min-w-0 flex-1 items-center gap-2 text-left"
           aria-expanded={expanded}
         >
           <span className="text-[11px] font-semibold uppercase text-text">
@@ -138,7 +138,7 @@ export function JobTray() {
           </span>
           <ChevronUp
             size={13}
-            className={`ml-auto text-text-muted ${expanded ? "" : "rotate-180"}`}
+            className={`ml-auto text-text-muted transition-transform duration-150 ease-out ${expanded ? "" : "rotate-180"}`}
           />
         </button>
         {jobs.some((job) => job.status !== "running") && (
