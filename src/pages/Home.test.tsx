@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { describe, expect, it } from "vitest";
@@ -45,8 +45,10 @@ describe("Home", () => {
       screen.getByRole("button", { name: "Drop file or press Ctrl+O" }),
     );
 
-    expect(screen.getByTestId("location")).toHaveTextContent(
-      "/pick?file=C%3A%2Fmedia%2Fphoto.png",
+    await waitFor(() =>
+      expect(screen.getByTestId("location")).toHaveTextContent(
+        "/pick?file=C%3A%2Fmedia%2Fphoto.png",
+      ),
     );
   });
 });
