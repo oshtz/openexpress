@@ -108,7 +108,7 @@ button {
 }
 
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 12px;
   height: 6px;
 }
 
@@ -118,6 +118,12 @@ button {
 
 ::-webkit-scrollbar-thumb {
   background: var(--color-border);
+}
+
+::-webkit-scrollbar-track:vertical,
+::-webkit-scrollbar-thumb:vertical {
+  border-left: 6px solid transparent;
+  background-clip: padding-box;
 }
 
 ::selection {
