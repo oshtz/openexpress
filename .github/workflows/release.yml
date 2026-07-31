@@ -21,6 +21,8 @@ jobs:
   build-windows:
     name: Windows portable
     runs-on: windows-2025-vs2026
+    outputs:
+      signed: ${{ steps.windows-signing.outputs.available }}
     steps:
       - uses: actions/checkout@v6
 
@@ -60,20 +62,26 @@ jobs:
           }
           Copy-Item -LiteralPath $exe -Destination "release-assets\OpenExpress-Portable.exe" -Force
 
-      - name: Require Windows signing secrets
+      - name: Detect Windows signing credentials
+        id: windows-signing
         shell: pwsh
         env:
           WINDOWS_CODESIGN_CERTIFICATE: ${{ secrets.WINDOWS_CODESIGN_CERTIFICATE }}
           WINDOWS_CODESIGN_PASSWORD: ${{ secrets.WINDOWS_CODESIGN_PASSWORD }}
         run: |
-          $missing = @()
-          if (-not $env:WINDOWS_CODESIGN_CERTIFICATE) { $missing += "WINDOWS_CODESIGN_CERTIFICATE" }
-          if (-not $env:WINDOWS_CODESIGN_PASSWORD) { $missing += "WINDOWS_CODESIGN_PASSWORD" }
-          if ($missing.Count -gt 0) {
-            throw "Missing required Windows signing secrets: $($missing -join ', ')"
+          $hasCertificate = -not [string]::IsNullOrWhiteSpace($env:WINDOWS_CODESIGN_CERTIFICATE)
+          $hasPassword = -not [string]::IsNullOrWhiteSpace($env:WINDOWS_CODESIGN_PASSWORD)
+          if ($hasCertificate -xor $hasPassword) {
+            throw "Windows signing is partially configured. Set both WINDOWS_CODESIGN_CERTIFICATE and WINDOWS_CODESIGN_PASSWORD, or neither."
+          }
+          $available = $hasCertificate -and $hasPassword
+          "available=$($available.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+          if (-not $available) {
+            Write-Warning "Windows signing credentials are not configured; publishing an unsigned portable executable."
           }
 
       - name: Sign and verify Windows executable
+        if: steps.windows-signing.outputs.available == 'true'
         shell: pwsh
         env:
           WINDOWS_CODESIGN_CERTIFICATE: ${{ secrets.WINDOWS_CODESIGN_CERTIFICATE }}
@@ -304,8 +312,9 @@ jobs:
         env:
           UPDATE_TAG: ${{ steps.release.outputs.tag }}
           UPDATE_VERSION: ${{ steps.release.outputs.version }}
-          UPDATE_NOTES: "Product, accessibility, and reliability improvements."
+          UPDATE_NOTES: "Desktop workbench redesign, safer local workflows, and native shell integration."
           MACOS_UPDATE_PLATFORM: ${{ steps.macos.outputs.platform }}
+          INCLUDE_WINDOWS_UPDATE: ${{ needs.build-windows.outputs.signed }}
         run: node scripts/generate-update-manifest.mjs
 
       - name: Generate and verify checksums
@@ -324,13 +333,14 @@ jobs:
           tag_name: ${{ steps.release.outputs.tag }}
           name: OpenExpress ${{ steps.release.outputs.tag }}
           body: |
-            Product, accessibility, and reliability improvements.
+            Desktop workbench redesign, safer local workflows, and native shell integration.
 
-            Signed release assets:
-            - Windows: OpenExpress-Portable.exe
+            Release assets:
+            - Windows: OpenExpress-Portable.exe (${{ needs.build-windows.outputs.signed == 'true' && 'Authenticode signed' || 'unsigned; verify SHA256SUMS.txt before running' }})
             - macOS updater: OpenExpress.app.zip
             - macOS manual install: OpenExpress.dmg
 
+            Unsigned Windows builds are excluded from latest.json and require a manual update.
             Verify downloads with SHA256SUMS.txt.
           draft: true
           prerelease: false

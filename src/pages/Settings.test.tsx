@@ -45,13 +45,15 @@ describe("Settings", () => {
     expect(container.textContent).not.toMatch(/[\u0590-\u05ff]|\u20ac|\u009d/);
   });
 
-  it("persists the selected accent color", () => {
+  it("persists the selected accent color", async () => {
     render(
       <MemoryRouter>
         <Settings />
       </MemoryRouter>,
     );
 
+    await screen.findByRole("button", { name: "Add to right-click menu" });
+    await screen.findAllByText("Update checks are disabled in this build.");
     fireEvent.change(screen.getByLabelText("Accent color"), {
       target: { value: "#ff4f91" },
     });
