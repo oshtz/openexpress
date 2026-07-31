@@ -4,10 +4,9 @@
 //! Strategy by platform:
 //! - **Windows** runtime: cascading submenu via the per-user registry under
 //!   `HKCU\Software\Classes\SystemFileAssociations\<ext>\shell\OpenExpress`,
-//!   with sub-commands defined in `HKCU\Software\Classes\CommandStore\shell`.
-//! - **macOS**: services are baked into the bundle's Info.plist at build
-//!   time, so the runtime toggle is a no-op there. The Settings panel
-//!   explains this.
+//!   plus a generic picker verb for mixed selections.
+//! - **macOS**: one type-filtered Service is baked into the bundle's
+//!   Info.plist, so the runtime toggle is a no-op there.
 
 pub mod tools;
 
@@ -19,8 +18,11 @@ use serde::Serialize;
 
 #[derive(Debug, Serialize)]
 pub struct ShellIntegrationStatus {
-    /// True when at least one tool's shell entry is currently registered.
+    /// True when OpenExpress-owned shell entries exist, including stale ones.
     pub installed: bool,
+    /// True when entries exist but do not match the running executable or
+    /// current registration shape.
+    pub needs_repair: bool,
     /// Set when the running platform doesn't support runtime register/unregister.
     pub manual_only: bool,
     /// Optional explanatory note shown in the Settings panel.
@@ -31,11 +33,15 @@ pub struct ShellIntegrationStatus {
 pub async fn shell_integration_status() -> AppResult<ShellIntegrationStatus> {
     #[cfg(target_os = "windows")]
     {
+        let exe = std::env::current_exe()
+            .map_err(|e| crate::AppError::Internal(format!("locating own exe: {e}")))?;
+        let status = windows::status(&exe);
         Ok(ShellIntegrationStatus {
-            installed: windows::is_installed(),
+            installed: status != windows::RegistrationStatus::Missing,
+            needs_repair: status == windows::RegistrationStatus::NeedsRepair,
             manual_only: false,
             note: Some(
-                "Windows 11 may show custom shell verbs under 'Show more options' in the classic context menu."
+                "Windows 11 shows this integration under 'Show more options' in the classic context menu."
                     .into(),
             ),
         })
@@ -44,18 +50,16 @@ pub async fn shell_integration_status() -> AppResult<ShellIntegrationStatus> {
     {
         Ok(ShellIntegrationStatus {
             installed: true,
+            needs_repair: false,
             manual_only: true,
-            note: Some(
-                "macOS Services are bundled with the app. Look for OpenExpress \
-                 entries under the 'Services' submenu when right-clicking a file."
-                    .into(),
-            ),
+            note: Some("Use 'Open with OpenExpress' under Finder's Services submenu.".into()),
         })
     }
     #[cfg(not(any(target_os = "windows", target_os = "macos")))]
     {
         Ok(ShellIntegrationStatus {
             installed: false,
+            needs_repair: false,
             manual_only: true,
             note: Some("Shell integration is not supported on this platform.".into()),
         })

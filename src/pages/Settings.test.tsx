@@ -9,7 +9,7 @@ vi.mock("@tauri-apps/api/core", () => ({
   },
   invoke: vi.fn(async (command: string) => {
     if (command === "shell_integration_status") {
-      return { installed: false, manual_only: false, note: null };
+      return { installed: false, needs_repair: false, manual_only: false, note: null };
     }
     if (command === "check_update") {
       return {

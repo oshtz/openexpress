@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { Link2, CheckCircle2, Loader2 } from "lucide-react";
+import { Link2, CheckCircle2, Loader2, AlertTriangle } from "lucide-react";
 import { useAppStore } from "../../stores/appStore";
 import { toAppError } from "../../lib/errors";
 import { Button } from "../ui";
 
 interface ShellIntegrationStatus {
   installed: boolean;
+  needs_repair: boolean;
   manual_only: boolean;
   note: string | null;
 }
@@ -14,8 +15,8 @@ interface ShellIntegrationStatus {
 /**
  * Settings panel: enable/disable OS file-manager right-click integration.
  *
- * Runtime register/unregister on Windows + Linux. macOS ships file
- * associations with the bundle (no toggle), so the panel just confirms
+ * Runtime register/unregister on Windows. macOS ships its Service with the
+ * bundle (no toggle), so the panel just confirms
  * the always-on status and points to the right place in Finder.
  */
 export function ShellIntegrationPanel() {
@@ -40,14 +41,19 @@ export function ShellIntegrationPanel() {
   const toggle = useCallback(async () => {
     if (!status || status.manual_only) return;
     setBusy(true);
-    const cmd = status.installed
+    const removing = status.installed && !status.needs_repair;
+    const cmd = removing
       ? "unregister_shell_integration"
       : "register_shell_integration";
     try {
       await invoke(cmd);
       pushToast(
         "success",
-        status.installed ? "Shell integration removed" : "Shell integration installed",
+        removing
+          ? "Shell integration removed"
+          : status.needs_repair
+            ? "Shell integration repaired"
+            : "Shell integration installed",
       );
       await refresh();
     } catch (e) {
@@ -77,18 +83,25 @@ export function ShellIntegrationPanel() {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <h3 className="text-[14px] font-semibold text-text">Shell integration</h3>
-            {status.installed && (
+            {status.needs_repair ? (
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-warning">
+                <AlertTriangle size={11} />
+                Needs repair
+              </span>
+            ) : status.installed ? (
               <span className="inline-flex items-center gap-1 text-[11px] font-medium text-success-ink">
                 <CheckCircle2 size={11} />
                 Active
               </span>
-            )}
+            ) : null}
           </div>
           <p className="text-[13px] text-text-secondary leading-relaxed">
             {status.manual_only
-              ? "OpenExpress quick-actions are bundled with the app."
-              : status.installed
-                ? "Right-click any supported image, video, audio, or PDF in your file manager to access OpenExpress tools. On Windows 11, check Show more options if it is not in the compact menu."
+              ? "OpenExpress adds one native file action that opens the compatible tool picker."
+              : status.needs_repair
+                ? "The right-click menu points to an older or incomplete OpenExpress installation. Repair it to use this version."
+                : status.installed
+                  ? "Right-click one or more supported files to open the compatible OpenExpress tools."
                 : "Add an OpenExpress submenu to your file manager's right-click menu for quick access to every tool."}
           </p>
           {status.note && (
@@ -99,19 +112,23 @@ export function ShellIntegrationPanel() {
 
           {!status.manual_only && (
             <Button
-              variant={status.installed ? "secondary" : "primary"}
+              variant={status.installed && !status.needs_repair ? "secondary" : "primary"}
               onClick={toggle}
               disabled={busy}
               className="mt-4 inline-flex items-center gap-2"
             >
               {busy && <Loader2 size={13} className="animate-spin" />}
               {busy
-                ? status.installed
+                ? status.installed && !status.needs_repair
                   ? "Removing..."
-                  : "Installing..."
-                : status.installed
+                  : status.needs_repair
+                    ? "Repairing..."
+                    : "Installing..."
+                : status.installed && !status.needs_repair
                   ? "Remove from right-click menu"
-                  : "Add to right-click menu"}
+                  : status.needs_repair
+                    ? "Repair right-click menu"
+                    : "Add to right-click menu"}
             </Button>
           )}
         </div>

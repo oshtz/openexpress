@@ -21,17 +21,21 @@ function Harness({ onFile }: { onFile: (paths: string[]) => void }) {
 }
 
 describe("usePrefilledFile", () => {
-  it("delivers repeated handoffs without remounting the route", async () => {
+  it("delivers complete repeated handoffs without remounting the route", async () => {
     const onFile = vi.fn();
     render(
-      <MemoryRouter initialEntries={["/tool?file=C%3A%5Cfirst.png"]}>
+      <MemoryRouter
+        initialEntries={["/tool?file=C%3A%5Cfirst.png&file=C%3A%5Csecond.png"]}
+      >
         <Routes>
           <Route path="/tool" element={<Harness onFile={onFile} />} />
         </Routes>
       </MemoryRouter>,
     );
 
-    await waitFor(() => expect(onFile).toHaveBeenCalledWith(["C:\\first.png"]));
+    await waitFor(() =>
+      expect(onFile).toHaveBeenCalledWith(["C:\\first.png", "C:\\second.png"]),
+    );
     fireEvent.click(document.querySelector("button")!);
     await waitFor(() => expect(onFile).toHaveBeenCalledWith(["C:\\second.png"]));
     expect(onFile).toHaveBeenCalledTimes(2);
