@@ -54,6 +54,20 @@ export function UpdatePanel() {
   const pushToast = useAppStore((s) => s.pushToast);
 
   const refresh = useCallback(async () => {
+    if (!("__TAURI_INTERNALS__" in window)) {
+      setStatus({
+        currentVersion: "web preview",
+        latestVersion: null,
+        available: false,
+        blocked: true,
+        reason: "browserPreview",
+        message: "Update checks are available in the desktop app.",
+        notes: null,
+        pubDate: null,
+        asset: null,
+      });
+      return;
+    }
     setBusy("checking");
     setError(null);
     try {

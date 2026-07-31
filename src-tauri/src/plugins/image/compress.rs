@@ -1,3 +1,4 @@
+use crate::output::write_output;
 use crate::{AppError, AppResult};
 use serde::Serialize;
 use std::fs;
@@ -35,17 +36,18 @@ pub async fn compress_image(
         .unwrap_or("jpg")
         .to_lowercase();
 
-    match ext.as_str() {
-        "jpg" | "jpeg" => {
-            let file =
-                fs::File::create(&output_path).map_err(|e| AppError::from_io(e, &output_path))?;
-            let mut encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(file, quality);
-            encoder.encode_image(&img)?;
+    let output_path = write_output(output_path, |path| {
+        match ext.as_str() {
+            "jpg" | "jpeg" => {
+                let file = fs::File::create(path)
+                    .map_err(|error| AppError::from_io(error, path.to_string_lossy()))?;
+                let mut encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(file, quality);
+                encoder.encode_image(&img)?;
+            }
+            _ => img.save(path)?,
         }
-        _ => {
-            img.save(&output_path)?;
-        }
-    }
+        Ok(())
+    })?;
 
     let compressed_size = fs::metadata(&output_path)
         .map_err(|e| AppError::from_io(e, &output_path))?

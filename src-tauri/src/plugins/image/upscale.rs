@@ -10,6 +10,8 @@
 //!
 //! Gated behind the `ai-upscale` cargo feature.
 
+#[cfg(feature = "ai-upscale")]
+use crate::output::write_output;
 use crate::{AppError, AppResult};
 use serde::Serialize;
 
@@ -248,12 +250,15 @@ fn upscale_image_with_model_path(
     let out_w = model_w * scale;
     let out_h = model_h * scale;
     let out = imageops::crop_imm(&padded_out, 0, 0, out_w, out_h).to_image();
-    out.save(output_path)?;
+    let output_path = write_output(output_path, |path| {
+        out.save(path)?;
+        Ok(())
+    })?;
 
-    let meta = std::fs::metadata(output_path).map_err(|e| AppError::from_io(e, output_path))?;
+    let meta = std::fs::metadata(&output_path).map_err(|e| AppError::from_io(e, &output_path))?;
 
     Ok(UpscaleResult {
-        output_path: output_path.to_string(),
+        output_path,
         width: out_w,
         height: out_h,
         file_size: meta.len(),

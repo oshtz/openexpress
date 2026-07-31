@@ -74,6 +74,7 @@ export function VideoReverse() {
     <FileDropzone
       accept={VIDEO_EXTS}
       multiple
+      selectedPaths={inputPaths}
       onFiles={handleFiles}
       label="Drop one or more videos here or click to browse"
     />

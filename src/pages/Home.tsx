@@ -1,334 +1,355 @@
-import { useNavigate } from "react-router-dom";
-import { useAppStore } from "../stores/appStore";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentType,
+  type KeyboardEvent,
+  type SVGProps,
+} from "react";
+import { ExternalLink, FolderOpen, RotateCcw, Trash2 } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import {
+  AudioWaveform,
+  FileText,
+  Image as ImageIcon,
+  Video,
+} from "pixelarticons/react";
+import { FileDropzone } from "../components/common/FileDropzone";
+import { iconFor } from "../lib/tool-icons";
 import { TOOLS, type ToolSpec } from "../lib/tools";
+import { getDirName } from "../lib/utils";
+import { useAppStore, type AppJob } from "../stores/appStore";
 
 type Category = ToolSpec["category"];
+type PixelIcon = ComponentType<SVGProps<SVGSVGElement>>;
 
-interface CategoryMeta {
-  label: string;
-  accent: string;
-  accentInk: string;
-  tagline: string;
-}
+const CATEGORIES: { id: Category; label: string; icon: PixelIcon }[] = [
+  { id: "image", label: "Image", icon: ImageIcon },
+  { id: "video", label: "Video", icon: Video },
+  { id: "pdf", label: "PDF", icon: FileText },
+  { id: "audio", label: "Audio", icon: AudioWaveform },
+];
 
-const CATEGORIES: Category[] = ["image", "video", "pdf", "audio"];
+const CATEGORY_LABELS = Object.fromEntries(
+  CATEGORIES.map(({ id, label }) => [id, label]),
+) as Record<Category, string>;
 
-const CAT_META: Record<Category, CategoryMeta> = {
-  image: {
-    label: "Image",
-    accent: "var(--color-accent-gold)",
-    accentInk: "var(--color-ink-on-gold)",
-    tagline: "Resize, crop, convert, and adjust.",
-  },
-  video: {
-    label: "Video",
-    accent: "var(--color-accent-steel)",
-    accentInk: "var(--color-ink-on-steel)",
-    tagline: "Trim, transcode, and condense.",
-  },
-  pdf: {
-    label: "PDF",
-    accent: "var(--color-accent-signal)",
-    accentInk: "var(--color-ink-on-signal)",
-    tagline: "Merge, compress, convert.",
-  },
-  audio: {
-    label: "Audio",
-    accent: "var(--color-accent-sage)",
-    accentInk: "var(--color-ink-on-sage)",
-    tagline: "Trim, fade, convert.",
-  },
+const SUPPORTED_EXTENSIONS = [...new Set(TOOLS.flatMap((tool) => tool.extensions))];
+
+const SHORTCUTS: Record<string, string> = {
+  "image-resize": "R",
+  "image-crop": "C",
+  "image-convert": "V",
+  "image-compress": "P",
+  "image-rotate": "O",
+  "image-adjust": "A",
+  "image-sharpen": "S",
+  "image-blur": "B",
+  "image-vector-trace": "T",
+  "image-remove-bg": "G",
+  "image-upscale": "U",
 };
 
-function groupByCategory(): Record<Category, ToolSpec[]> {
-  const out: Record<Category, ToolSpec[]> = { image: [], video: [], pdf: [], audio: [] };
-  for (const tool of TOOLS) out[tool.category].push(tool);
-  return out;
+const DISPLAY_COPY: Record<string, string> = {
+  "image-resize": "Change dimensions and scale",
+  "image-crop": "Trim edges of the image",
+  "image-convert": "Convert to another format",
+  "image-compress": "Reduce file size",
+  "image-rotate": "Rotate or flip orientation",
+  "image-adjust": "Brightness, contrast, color",
+  "image-sharpen": "Enhance edges and details",
+  "image-blur": "Apply blur to the image",
+  "image-vector-trace": "Vectorize to SVG format",
+  "image-remove-bg": "Remove background",
+  "image-upscale": "Enhance resolution with AI",
+};
+
+function EmptyState({ title, detail }: { title: string; detail: string }) {
+  return (
+    <div className="workbench-empty-copy">
+      <span className="empty-index">00</span>
+      <strong>{title}</strong>
+      <small>{detail}</small>
+    </div>
+  );
 }
 
-function ToolRow({
-  tool,
-  accent,
-  onClick,
-}: {
-  tool: ToolSpec;
-  accent: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="group w-full grid grid-cols-12 gap-4 items-baseline text-left border-b border-border-subtle hover:bg-bg-tertiary transition-colors"
-      style={{ padding: "18px 4px" }}
-    >
-      <span
-        className="col-span-4"
-        style={{
-          fontSize: 17,
-          fontWeight: 500,
-          color: "var(--color-text)",
-        }}
-      >
-        {tool.label}
-      </span>
-      <span
-        className="col-span-7"
-        style={{
-          fontSize: 14,
-          lineHeight: 1.4,
-          color: "var(--color-text-secondary)",
-        }}
-      >
-        {tool.description}
-      </span>
-      <span
-        className="col-span-1 text-right pr-2 transition-transform group-hover:translate-x-1"
-        style={{ color: accent, fontSize: 20, lineHeight: 1 }}
-      >
-        -&gt;
-      </span>
-    </button>
-  );
+function jobSummary(job: AppJob): string {
+  if (job.status === "running") {
+    if (job.total > 1) return `${job.completed} / ${job.total}`;
+    return job.progress === null ? "Working" : `${Math.round(job.progress)}%`;
+  }
+  if (job.status === "succeeded") return "Done";
+  if (job.status === "cancelled") return "Cancelled";
+  return job.message ?? "Failed";
+}
+
+async function openLocalPath(path: string): Promise<void> {
+  if (!("__TAURI_INTERNALS__" in window)) return;
+  const { open } = await import("@tauri-apps/plugin-shell");
+  await open(path);
 }
 
 export function Home() {
   const navigate = useNavigate();
-  const recentFiles = useAppStore((s) => s.recentFiles);
-  const grouped = groupByCategory();
+  const [params] = useSearchParams();
+  const recentFiles = useAppStore((state) => state.recentFiles);
+  const removeRecentFile = useAppStore((state) => state.removeRecentFile);
+  const jobs = useAppStore((state) => state.jobs);
+  const clearFinishedJobs = useAppStore((state) => state.clearFinishedJobs);
+  const pushToast = useAppStore((state) => state.pushToast);
+  const [category, setCategory] = useState<Category>("image");
+  const [filter, setFilter] = useState("");
+  const [activeResult, setActiveResult] = useState(-1);
+  const filterRef = useRef<HTMLInputElement>(null);
+  const view = params.get("view") || "open";
+  const hasFilter = filter.trim().length > 0;
+
+  const tools = useMemo(() => {
+    const query = filter.trim().toLowerCase();
+    return TOOLS.filter((tool) => {
+      if (!query && tool.category !== category) return false;
+      const copy = DISPLAY_COPY[tool.id] ?? tool.description;
+      return !query || `${tool.label} ${copy} ${tool.category}`.toLowerCase().includes(query);
+    });
+  }, [category, filter]);
+
+  useEffect(() => {
+    const handler = (event: globalThis.KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.matches("input, textarea, [contenteditable=true]")) return;
+
+      if (event.key === "/") {
+        event.preventDefault();
+        filterRef.current?.focus();
+        return;
+      }
+
+      if (category !== "image" || event.ctrlKey || event.metaKey || event.altKey) return;
+      const tool = TOOLS.find(
+        (candidate) => SHORTCUTS[candidate.id]?.toLowerCase() === event.key.toLowerCase(),
+      );
+      if (tool) navigate(tool.route);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [category, navigate]);
+
+  const openPath = (path: string) => {
+    void openLocalPath(path).catch((error) => {
+      pushToast("error", error instanceof Error ? error.message : String(error));
+    });
+  };
+
+  const handleFilterKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (tools.length === 0) return;
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveResult((current) => (current + 1) % tools.length);
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveResult((current) => (current <= 0 ? tools.length - 1 : current - 1));
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      navigate(tools[activeResult >= 0 ? activeResult : 0].route);
+    }
+  };
 
   return (
-    <div>
-      <header className="animate-fade-in-up grid grid-cols-12 gap-8 border-b border-border pb-10 mb-12">
-        <div className="col-span-12 md:col-span-8">
-          <h1
-            style={{
-              fontFamily: "var(--font-sans)",
-              fontWeight: 700,
-              fontSize: "clamp(2.6rem, 6vw, 5.2rem)",
-              lineHeight: 0.9,
-              textTransform: "uppercase",
-              color: "var(--color-text)",
-            }}
-          >
-            Edit media.
-            <br />
-            Locally.
-          </h1>
-          <p
-            style={{
-              fontSize: 15,
-              lineHeight: 1.55,
-              color: "var(--color-text-secondary)",
-              maxWidth: "54ch",
-              marginTop: 24,
-            }}
-          >
-            Fast, private tools for image, video, audio, and PDF. Everything runs
-            on your machine. No cloud. No subscription. No tracking.
-          </p>
-        </div>
+    <div className="workbench" aria-label="OpenExpress workbench">
+      <h1 className="sr-only">Edit media locally</h1>
 
-        <aside className="col-span-12 md:col-span-4 md:border-l md:border-border md:pl-8 flex flex-col justify-between">
-          <div>
-            <div className="swiss-label">Tools available</div>
-            <div className="numeral-outline mt-2" style={{ fontSize: "7rem", lineHeight: 0.85 }}>
-              {String(TOOLS.length).padStart(2, "0")}
+      <section className="workbench-canvas" aria-label={`${view} workspace`}>
+        {view === "open" && (
+          <FileDropzone
+            variant="workbench"
+            accept={SUPPORTED_EXTENSIONS}
+            label="Drop file or press Ctrl+O"
+            onFiles={(paths) => {
+              if (paths[0]) navigate(`/pick?file=${encodeURIComponent(paths[0])}`);
+            }}
+          />
+        )}
+
+        {view === "recent" && (
+          <div className="recent-panel">
+            <div className="panel-heading">
+              <span>Recent outputs</span>
+              <span>{String(recentFiles.length).padStart(2, "0")} entries</span>
             </div>
+            {recentFiles.length === 0 ? (
+              <EmptyState title="No recent outputs" detail="Complete a task to start local history" />
+            ) : (
+              <div className="recent-list">
+                {recentFiles.slice(0, 20).map((file, index) => (
+                  <div key={`${file.path}-${file.timestamp}`} className="recent-row">
+                    <span>{String(index + 1).padStart(2, "0")}</span>
+                    <strong title={file.path}>{file.name}</strong>
+                    <small>{file.tool}</small>
+                    <div className="recent-actions">
+                      <button
+                        type="button"
+                        title="Open output"
+                        aria-label={`Open ${file.name}`}
+                        onClick={() => openPath(file.path)}
+                      >
+                        <ExternalLink size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        title="Open containing folder"
+                        aria-label={`Open folder containing ${file.name}`}
+                        onClick={() => openPath(getDirName(file.path))}
+                      >
+                        <FolderOpen size={14} />
+                      </button>
+                      {file.route && file.sourcePath && (
+                        <button
+                          type="button"
+                          title="Use this tool again"
+                          aria-label={`Use ${file.tool} again`}
+                          onClick={() =>
+                            navigate(`${file.route}?file=${encodeURIComponent(file.sourcePath!)}`)
+                          }
+                        >
+                          <RotateCcw size={14} />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        title="Remove from recent outputs"
+                        aria-label={`Remove ${file.name} from recent outputs`}
+                        onClick={() => removeRecentFile(file.path)}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        </aside>
-      </header>
+        )}
 
-      <section className="grid grid-cols-1 md:grid-cols-4 border border-border mb-12">
-        {CATEGORIES.map((cat, idx) => {
-          const meta = CAT_META[cat];
-          const items = grouped[cat];
-          return (
-            <button
-              key={cat}
-              type="button"
-              aria-label={`Jump to ${meta.label}`}
-              onClick={() => {
-                const reduceMotion = window.matchMedia(
-                  "(prefers-reduced-motion: reduce)",
-                ).matches;
-                document.getElementById(`section-${cat}`)?.scrollIntoView({
-                  behavior: reduceMotion ? "auto" : "smooth",
-                  block: "start",
-                });
-              }}
-              className={`animate-fade-in-up relative px-8 py-10 pb-36 text-left transition-opacity hover:opacity-90 ${idx > 0 ? "md:border-l border-border border-t md:border-t-0" : ""}`}
-              style={{
-                background: meta.accent,
-                color: meta.accentInk,
-                minHeight: 240,
-                animationDelay: `${60 + idx * 50}ms`,
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase",
-                  color: meta.accentInk,
-                  opacity: 0.7,
-                }}
-              >
-                {meta.label}
+        {view === "queue" && (
+          <div className="recent-panel">
+            <div className="panel-heading">
+              <span>Queue</span>
+              {jobs.some((job) => job.status !== "running") ? (
+                <button type="button" onClick={clearFinishedJobs}>Clear finished</button>
+              ) : (
+                <span>{String(jobs.length).padStart(2, "0")} jobs</span>
+              )}
+            </div>
+            {jobs.length === 0 ? (
+              <EmptyState title="Queue empty" detail="Processed tasks will appear here" />
+            ) : (
+              <div className="recent-list">
+                {jobs.map((job, index) => (
+                  <button
+                    type="button"
+                    key={job.id}
+                    className="queue-row"
+                    onClick={() => navigate(job.route)}
+                  >
+                    <span>{String(index + 1).padStart(2, "0")}</span>
+                    <strong>{job.tool}</strong>
+                    <small>{jobSummary(job)}</small>
+                  </button>
+                ))}
               </div>
-
-              <div
-                className="mt-2"
-                style={{
-                  fontFamily: "var(--font-sans)",
-                  fontSize: 24,
-                  fontWeight: 500,
-                  lineHeight: 1.15,
-                  maxWidth: "22ch",
-                }}
-              >
-                {meta.tagline}
-              </div>
-
-              <div
-                className="absolute left-8 right-8 bottom-10 flex items-end justify-between pt-6"
-                style={{ borderTop: `1px solid ${meta.accentInk}`, opacity: 0.85 }}
-              >
-                <div
-                  style={{
-                    fontFamily: "var(--font-sans)",
-                    fontWeight: 400,
-                    fontSize: 72,
-                    lineHeight: 0.85,
-                    color: "transparent",
-                    WebkitTextStroke: `1.5px ${meta.accentInk}`,
-                  }}
-                >
-                  {String(items.length).padStart(2, "0")}
-                </div>
-                <div
-                  style={{
-                    color: meta.accentInk,
-                    fontSize: 11,
-                    fontWeight: 600,
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                    textAlign: "right",
-                    lineHeight: 1.5,
-                  }}
-                >
-                  {items.length === 1 ? "tool" : "tools"}
-                </div>
-              </div>
-            </button>
-          );
-        })}
+            )}
+          </div>
+        )}
       </section>
 
-      <div className="animate-fade-in-up flex items-baseline justify-between mb-6">
-        <span className="swiss-label">All tools</span>
-      </div>
+      <aside className="actions-console" aria-label="Actions">
+        <div className="actions-title">Actions</div>
 
-      {CATEGORIES.map((cat) => {
-        const meta = CAT_META[cat];
-        const items = grouped[cat];
-        if (items.length === 0) return null;
+        <div className="tool-filter">
+          <label className="sr-only" htmlFor="tool-filter-input">Find a tool</label>
+          <input
+            id="tool-filter-input"
+            ref={filterRef}
+            value={filter}
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded={hasFilter}
+            aria-controls={hasFilter ? "tool-search-results" : undefined}
+            aria-activedescendant={
+              activeResult >= 0 ? `tool-search-result-${tools[activeResult]?.id}` : undefined
+            }
+            onChange={(event) => {
+              setFilter(event.target.value);
+              setActiveResult(-1);
+            }}
+            onKeyDown={handleFilterKeyDown}
+            placeholder="FILTER"
+          />
+          <kbd>/</kbd>
+        </div>
 
-        return (
-          <section
-            key={cat}
-            id={`section-${cat}`}
-            className="animate-fade-in-up mb-14 scroll-mt-6"
-          >
-            <div className="flex items-baseline justify-between border-b border-border pb-4 mb-0">
-              <div className="flex items-baseline gap-4">
-                <span
-                  style={{
-                    width: 12,
-                    height: 12,
-                    background: meta.accent,
-                    transform: "translateY(1px)",
-                    display: "inline-block",
-                  }}
-                />
-                <h2
-                  style={{
-                    fontFamily: "var(--font-sans)",
-                    fontWeight: 700,
-                    fontSize: 28,
-                    textTransform: "uppercase",
-                    color: "var(--color-text)",
-                  }}
-                >
-                  {meta.label}
-                </h2>
-              </div>
-              <span className="swiss-label">
-                {items.length} {items.length === 1 ? "tool" : "tools"}
-              </span>
-            </div>
+        <p role="status" className="sr-only">
+          {hasFilter ? `${tools.length} matching ${tools.length === 1 ? "tool" : "tools"}` : ""}
+        </p>
 
-            <div>
-              {items.map((tool) => (
-                <ToolRow
-                  key={tool.id}
-                  tool={tool}
-                  accent={meta.accent}
-                  onClick={() => navigate(tool.route)}
-                />
-              ))}
-            </div>
-          </section>
-        );
-      })}
-
-      {recentFiles.length > 0 && (
-        <section className="animate-fade-in-up mb-12">
-          <div className="flex items-baseline justify-between border-b border-border pb-4">
-            <h2
-              style={{
-                fontFamily: "var(--font-sans)",
-                fontWeight: 700,
-                fontSize: 22,
-                textTransform: "uppercase",
-                color: "var(--color-text)",
-              }}
-            >
-              Recent files
-            </h2>
-            <span className="swiss-label">{Math.min(recentFiles.length, 5)} entries</span>
-          </div>
-
-          <div>
-            {recentFiles.slice(0, 5).map((file) => (
-              <div
-                key={file.path + file.timestamp}
-                className="grid grid-cols-12 gap-4 items-baseline border-b border-border-subtle py-3 hover:bg-bg-tertiary transition-colors px-1"
+        <div className="category-switcher" role="radiogroup" aria-label="Tool category">
+          {CATEGORIES.map((item) => {
+            const Icon = item.icon;
+            const active = item.id === category;
+            return (
+              <button
+                type="button"
+                key={item.id}
+                role="radio"
+                aria-checked={active}
+                aria-label={`${item.label} tools`}
+                className={active ? "active" : ""}
+                onClick={() => {
+                  setCategory(item.id);
+                  setActiveResult(-1);
+                }}
               >
-                <span
-                  className="col-span-8 truncate"
-                  style={{ fontSize: 14, color: "var(--color-text)" }}
-                  title={file.path}
-                >
-                  {file.name}
-                </span>
-                <span
-                  className="col-span-4 text-right pr-2"
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 600,
-                    letterSpacing: "0.06em",
-                    textTransform: "uppercase",
-                    color: "var(--color-text-muted)",
-                  }}
-                >
-                  {file.tool}
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+                <Icon width={52} height={52} aria-hidden />
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="tool-list-heading">
+          <span>{hasFilter ? "search results" : `${category} tools`}</span>
+          <span>{String(tools.length).padStart(2, "0")}</span>
+        </div>
+
+        <div
+          className="console-tool-list"
+          id={hasFilter ? "tool-search-results" : undefined}
+          role={hasFilter ? "listbox" : undefined}
+        >
+          {tools.map((tool, index) => (
+            <button
+              type="button"
+              key={tool.id}
+              id={hasFilter ? `tool-search-result-${tool.id}` : undefined}
+              role={hasFilter ? "option" : undefined}
+              aria-selected={hasFilter ? index === activeResult : undefined}
+              className={hasFilter && index === activeResult ? "active" : ""}
+              onMouseEnter={() => hasFilter && setActiveResult(index)}
+              onClick={() => navigate(tool.route)}
+            >
+              <span className="tool-icon" aria-hidden>{iconFor(tool.id, 28)}</span>
+              <span className="tool-name">
+                {hasFilter ? `${tool.label} ${CATEGORY_LABELS[tool.category]}` : tool.label}
+              </span>
+              <span className="tool-description">{DISPLAY_COPY[tool.id] ?? tool.description}</span>
+              {SHORTCUTS[tool.id] && <kbd>[{SHORTCUTS[tool.id]}]</kbd>}
+            </button>
+          ))}
+          {tools.length === 0 && <div className="no-tool-results">No matching commands</div>}
+        </div>
+      </aside>
     </div>
   );
 }

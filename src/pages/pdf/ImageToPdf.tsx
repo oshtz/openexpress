@@ -52,6 +52,7 @@ export function ImageToPdf() {
   const upload = (
     <FileDropzone
       multiple
+      selectedPaths={inputPaths}
       accept={IMAGE_EXTS}
       onFiles={handleFiles}
       label="Drop images here or click to browse"

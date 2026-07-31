@@ -10,10 +10,19 @@ on:
       - "v*.*.*"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build-windows:
     name: Windows portable
     runs-on: windows-2025-vs2026
+    outputs:
+      signed: ${{ steps.windows-signing.outputs.available }}
     steps:
       - uses: actions/checkout@v6
 
@@ -33,6 +42,9 @@ jobs:
 
       - run: npm ci
 
+      - name: Verify release version alignment
+        run: npm run check:version
+
       - name: Build portable executable
         shell: pwsh
         run: npx tauri build --no-bundle
@@ -49,6 +61,59 @@ jobs:
             throw "Could not find built OpenExpress executable."
           }
           Copy-Item -LiteralPath $exe -Destination "release-assets\OpenExpress-Portable.exe" -Force
+
+      - name: Detect Windows signing credentials
+        id: windows-signing
+        shell: pwsh
+        env:
+          WINDOWS_CODESIGN_CERTIFICATE: ${{ secrets.WINDOWS_CODESIGN_CERTIFICATE }}
+          WINDOWS_CODESIGN_PASSWORD: ${{ secrets.WINDOWS_CODESIGN_PASSWORD }}
+        run: |
+          $hasCertificate = -not [string]::IsNullOrWhiteSpace($env:WINDOWS_CODESIGN_CERTIFICATE)
+          $hasPassword = -not [string]::IsNullOrWhiteSpace($env:WINDOWS_CODESIGN_PASSWORD)
+          if ($hasCertificate -xor $hasPassword) {
+            throw "Windows signing is partially configured. Set both WINDOWS_CODESIGN_CERTIFICATE and WINDOWS_CODESIGN_PASSWORD, or neither."
+          }
+          $available = $hasCertificate -and $hasPassword
+          "available=$($available.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+          if (-not $available) {
+            Write-Warning "Windows signing credentials are not configured; publishing an unsigned portable executable."
+          }
+
+      - name: Sign and verify Windows executable
+        if: steps.windows-signing.outputs.available == 'true'
+        shell: pwsh
+        env:
+          WINDOWS_CODESIGN_CERTIFICATE: ${{ secrets.WINDOWS_CODESIGN_CERTIFICATE }}
+          WINDOWS_CODESIGN_PASSWORD: ${{ secrets.WINDOWS_CODESIGN_PASSWORD }}
+        run: |
+          $certPath = Join-Path $env:RUNNER_TEMP "openexpress-codesign.pfx"
+          try {
+            [IO.File]::WriteAllBytes(
+              $certPath,
+              [Convert]::FromBase64String($env:WINDOWS_CODESIGN_CERTIFICATE)
+            )
+            $signTool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin" `
+              -Recurse -Filter "signtool.exe" |
+              Where-Object { $_.FullName -match '\\x64\\' } |
+              Sort-Object FullName -Descending |
+              Select-Object -First 1
+            if (-not $signTool) { throw "Could not find the x64 signtool.exe." }
+
+            $asset = "release-assets\OpenExpress-Portable.exe"
+            & $signTool.FullName sign /fd SHA256 /td SHA256 `
+              /tr "http://timestamp.digicert.com" `
+              /f $certPath /p $env:WINDOWS_CODESIGN_PASSWORD $asset
+            if ($LASTEXITCODE -ne 0) { throw "signtool failed with exit code $LASTEXITCODE." }
+
+            $signature = Get-AuthenticodeSignature -LiteralPath $asset
+            if ($signature.Status -ne "Valid") {
+              throw "Authenticode verification failed: $($signature.StatusMessage)"
+            }
+          }
+          finally {
+            Remove-Item -LiteralPath $certPath -Force -ErrorAction SilentlyContinue
+          }
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v6
@@ -78,6 +143,9 @@ jobs:
           workspaces: src-tauri
 
       - run: npm ci
+
+      - name: Verify release version alignment
+        run: npm run check:version
 
       - name: Require macOS signing secrets
         env:
@@ -225,6 +293,11 @@ jobs:
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
 
+      - name: Verify release version alignment
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        run: npm run check:version
+
       - name: Download built artifacts
         uses: actions/download-artifact@v5
         with:
@@ -239,9 +312,20 @@ jobs:
         env:
           UPDATE_TAG: ${{ steps.release.outputs.tag }}
           UPDATE_VERSION: ${{ steps.release.outputs.version }}
-          UPDATE_NOTES: "Initial OpenExpress release."
+          UPDATE_NOTES: "Desktop workbench redesign, safer local workflows, and native shell integration."
           MACOS_UPDATE_PLATFORM: ${{ steps.macos.outputs.platform }}
+          INCLUDE_WINDOWS_UPDATE: ${{ needs.build-windows.outputs.signed }}
         run: node scripts/generate-update-manifest.mjs
+
+      - name: Generate and verify checksums
+        working-directory: release-assets
+        run: |
+          sha256sum \
+            OpenExpress-Portable.exe \
+            OpenExpress.app.zip \
+            OpenExpress.dmg \
+            latest.json > SHA256SUMS.txt
+          sha256sum --check SHA256SUMS.txt
 
       - name: Create or update draft release
         uses: softprops/action-gh-release@v3
@@ -249,12 +333,15 @@ jobs:
           tag_name: ${{ steps.release.outputs.tag }}
           name: OpenExpress ${{ steps.release.outputs.tag }}
           body: |
-            Initial OpenExpress release.
+            Desktop workbench redesign, safer local workflows, and native shell integration.
 
-            Updater assets:
-            - Windows: OpenExpress-Portable.exe (unsigned portable build)
+            Release assets:
+            - Windows: OpenExpress-Portable.exe (${{ needs.build-windows.outputs.signed == 'true' && 'Authenticode signed' || 'unsigned; verify SHA256SUMS.txt before running' }})
             - macOS updater: OpenExpress.app.zip
             - macOS manual install: OpenExpress.dmg
+
+            Unsigned Windows builds are excluded from latest.json and require a manual update.
+            Verify downloads with SHA256SUMS.txt.
           draft: true
           prerelease: false
           files: |
@@ -262,3 +349,4 @@ jobs:
             release-assets/OpenExpress.app.zip
             release-assets/OpenExpress.dmg
             release-assets/latest.json
+            release-assets/SHA256SUMS.txt

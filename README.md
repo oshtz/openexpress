@@ -1,121 +1,149 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="public/openexpress-logo-white.svg" />
-    <img src="public/openexpress-logo.svg" width="220" alt="OpenExpress" />
+    <source media="(prefers-color-scheme: dark)" srcset="public/openexpress-logo-pixel-white.svg" />
+    <img src="public/openexpress-logo-pixel.svg" width="260" alt="OpenExpress" />
   </picture>
 </p>
 
-> Open-source, offline-first desktop alternative to Adobe Express. Fast native quick-actions for image, video, audio, and PDF — no subscription, no cloud processing requirement, no privacy trade-offs.
-
 <p align="center">
-  <img alt="Tauri 2" src="https://img.shields.io/badge/Tauri%202-111111?style=for-the-badge&labelColor=111111&color=111111" />
-  <img alt="Rust" src="https://img.shields.io/badge/Rust-111111?style=for-the-badge&labelColor=111111&color=111111" />
-  <img alt="React 19" src="https://img.shields.io/badge/React%2019-111111?style=for-the-badge&labelColor=111111&color=111111" />
-  <img alt="React Router 7" src="https://img.shields.io/badge/React%20Router%207-111111?style=for-the-badge&labelColor=111111&color=111111" />
-  <img alt="Vite 8" src="https://img.shields.io/badge/Vite%208-111111?style=for-the-badge&labelColor=111111&color=111111" />
-  <img alt="Tailwind CSS 4" src="https://img.shields.io/badge/Tailwind%20CSS%204-111111?style=for-the-badge&labelColor=111111&color=111111" />
+  A local-first desktop workbench for fast image, video, PDF, and audio tasks.
 </p>
 
-The current target platforms are Windows and macOS; Linux is kept as a development build target, not an initial release target.
-
 <p align="center">
-  <a href="https://youtu.be/ike4lq0X5Q8">
-    <img src="https://img.youtube.com/vi/ike4lq0X5Q8/maxresdefault.jpg" alt="Watch the OpenExpress promo video" width="640" />
-  </a>
+  <a href="https://github.com/oshtz/openexpress/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/oshtz/openexpress/actions/workflows/ci.yml/badge.svg" /></a>
+  <a href="https://github.com/oshtz/openexpress/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/oshtz/openexpress" /></a>
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-111111" /></a>
 </p>
 
-## Status
+![OpenExpress workbench](docs/screenshots/openexpress-workbench.png)
 
-Alpha. The core quick-action surface is implemented and wired: 32 tools across image, video, PDF, and audio.
+OpenExpress turns common media operations into focused desktop tools. Drop a file, choose a compatible action, configure the result, and process it without uploading the source file.
+
+## Download
+
+Download the current build from [GitHub Releases](https://github.com/oshtz/openexpress/releases/latest):
+
+- **Windows:** portable `OpenExpress-Portable.exe`. The release notes state whether it is Authenticode signed.
+- **macOS:** signed and notarized app, distributed as `OpenExpress.dmg` and `OpenExpress.app.zip` for self-update.
+- **Integrity:** verify downloads with the release's `SHA256SUMS.txt`.
+
+Windows and macOS are the release targets. Linux remains available as a development build target.
+
+## Workbench
+
+- Drag and drop files, use the compatible file picker, or paste an image from the clipboard.
+- Search all 31 tools from one command surface and filter by media category.
+- Track active and completed work in the queue and job tray.
+- Reopen outputs, reveal their folders, or run the same tool again from recent history.
+- Choose a default output folder or keep collision-safe results beside each source file.
+- Launch compatible actions from Windows Explorer and macOS Finder.
+- Check, download, and install verified updates from Settings.
 
 ## Tools
 
 - **Image:** Resize, Crop, Convert, Adjust, Compress, Rotate / Flip, Sharpen, Blur, Trace to SVG, Remove BG, AI Upscale
 - **Video:** Trim, Convert, Resize, To GIF, Speed, Extract Audio, Crop, Reverse, Mute, Merge
-- **PDF:** Merge, Image → PDF, PDF → Image, Compress, Split, Organize
+- **PDF:** Merge, Image to PDF, Compress, Split, Organize
 - **Audio:** Trim, Convert, Fade In, Fade Out, Volume
 
-AI tools are local-first and enabled in default app builds. Remove BG and AI Upscale use ONNX-model infrastructure, but model files are not bundled; users explicitly download checksum-verified models from the tool UI on first use.
+AI model files are not bundled. The app downloads them only after explicit user action, verifies their checksums, and runs inference locally.
+
+## Local-First Boundary
+
+Media processing runs on the device through Rust, FFmpeg, and local ONNX inference. OpenExpress has no account requirement, file-upload path, or telemetry service.
+
+Network access is limited to:
+
+- user-initiated update checks and downloads from GitHub Releases;
+- user-initiated AI model downloads;
+- a first-use FFmpeg download when no compatible local binary is available.
 
 ## Usage
 
-Launch OpenExpress, pick a tool from Image, Video, PDF, or Audio, add files by drag/drop or the file picker, adjust the options, and run it. Single-file tools ask where to save unless Settings -> Default Output Folder is set. Batch tools save to that folder, or next to each input with a descriptive suffix.
+1. Open OpenExpress and drop a file, or press `Ctrl/Cmd+O`.
+2. Pick one of the compatible tools.
+3. Adjust the options and run the task.
+4. Open the result from the job tray or Recent view.
+
+Useful shortcuts:
+
+- `F1`: Home
+- `F2`: Settings
+- `F3`: Queue
+- `/`: Focus tool search
+- `Ctrl/Cmd+,`: Settings
+- `Ctrl/Cmd+V`: Paste an image where image input is supported
+
+## Native File Menus
+
+**Windows:** Settings can install, repair, or remove a per-user `Open with OpenExpress` submenu. Right-click one or more supported files to launch a specific compatible tool or the generic picker. Windows 11 places this integration under **Show more options**.
+
+**macOS:** The signed app bundle declares an `Open with OpenExpress` Finder Service for supported images, videos, audio files, and PDFs. Find it in Finder's **Services** submenu.
 
 ## Requirements
 
-- **Node** >= 20.19.0 or >= 22.13.0
-- **Rust** >= 1.77.2 (stable toolchain)
-- **Tauri prerequisites** for your platform: <https://tauri.app/start/prerequisites/>
-- **FFmpeg** — handled through `ffmpeg-sidecar` for media operations; first use may download/cache the sidecar depending on platform/build.
+- Node.js >= 20.19.0 or >= 22.13.0
+- Rust >= 1.88
+- [Tauri prerequisites](https://tauri.app/start/prerequisites/) for the host platform
 
 ## Develop
 
 ```sh
-npm install
+npm ci
 npm run tauri dev
 ```
 
-The dev command starts Vite on `http://localhost:5173` and launches the Tauri shell with the Rust backend hot-reloading on save.
+Vite runs at `http://localhost:5173` and the Tauri shell reloads as the frontend and Rust backend change.
 
-If Vite/Rolldown reports a missing native optional dependency, refresh the Node install from a clean state:
-
-```sh
-rm -rf node_modules
-npm ci
-```
-
-## Build
+## Build And Release
 
 ```sh
 npm run tauri build
 ```
 
-Local builds produce the configured Tauri bundles in `src-tauri/target/release/bundle/`. The release workflow publishes a Windows portable exe, a macOS DMG, a macOS `.app.zip` updater payload, and `latest.json`.
+Local bundles are written under `src-tauri/target/release/bundle/`. Tagged releases create a draft containing the Windows portable executable, macOS DMG, macOS updater archive, updater manifest, and checksums.
 
-Useful local helpers:
-
-```sh
-npm run smoke:fixtures
-npm run models:mirror
-```
+Windows signing is optional: when both signing credentials are configured, the workflow signs the executable and includes it in self-update metadata. Without them, it publishes an unsigned manual download and excludes that executable from self-update. Partial signing configuration fails the release. macOS signing and notarization remain required.
 
 ## Verification
 
 ```sh
-# Frontend
+# Frontend and release metadata
+npm run check:version
+npm run audit:prod
 npx tsc --noEmit -p tsconfig.app.json
 npm run lint
+npm test
 npm run build
+npm run smoke:routes
 
-# Backend
+# Rust backend
 cd src-tauri
 cargo fmt --all -- --check
 cargo clippy --all-targets -- -D warnings
-cargo test --lib
+cargo test
+cargo audit
+cargo +1.88.0 check --locked
 ```
 
-For packaged-app confidence, run an interactive desktop smoke pass for drag/drop, file dialogs, crop/trim controls, media playback metadata, model downloads, batch cancellation, CLI handoff, and Windows Explorer shell integration.
-
-## Project layout
+## Project Layout
 
 ```text
-src/                         React + TypeScript frontend
-├── pages/{image,video,pdf,audio}
-├── components/{common,layout}
-├── hooks/                    React hooks (useProcess, useBatch, launch-action helpers)
-├── stores/                   Zustand stores
-└── lib/                      Tool registry, output paths, errors, utilities
+src/                         React and TypeScript frontend
+  pages/                     Workbench and media tool routes
+  components/                Shared controls and desktop shell UI
+  hooks/                     Processing, launch, and keyboard workflows
+  stores/                    Local application state
+  lib/                       Tool catalog, output paths, and utilities
 
-src-tauri/                    Tauri shell + Rust backend
-├── src/plugins/{image,video,pdf,audio}
-├── src/plugins/models.rs     ML model catalog/downloader
-├── src/shell/                OS shell integration + tool registry
-├── src/updater.rs            Custom GitHub Releases updater
-├── capabilities/             Tauri permissions
-├── tauri.conf.json           App config, CSP, bundle metadata
-└── Cargo.toml                Rust deps and feature flags
+src-tauri/                   Tauri shell and Rust backend
+  src/plugins/               Image, video, PDF, audio, model, and clipboard logic
+  src/shell/                 Explorer and Finder integration
+  src/updater.rs             Verified GitHub Releases updater
+  capabilities/              Tauri permissions
+  tauri.conf.json            Bundle and application configuration
 ```
 
 ## License
 
-MIT — see [LICENSE](./LICENSE).
+MIT. See [LICENSE](LICENSE).

@@ -1,6 +1,6 @@
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { HelpCircle } from "lucide-react";
-import { type ToolSpec, toolsForPath, extensionOf } from "../lib/tools";
+import { type ToolSpec, toolsForPaths, extensionOf } from "../lib/tools";
 import { CATEGORY_META } from "../lib/tool-icons";
 import { getFileName } from "../lib/utils";
 
@@ -17,9 +17,9 @@ const ACCENT: Record<Category, string> = {
 export function PickTool() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const file = params.get("file");
+  const files = params.getAll("file");
 
-  if (!file) {
+  if (files.length === 0) {
     // Shouldn't happen via the launch flow, but render something useful if a
     // user navigates here directly.
     return (
@@ -34,12 +34,15 @@ export function PickTool() {
     );
   }
 
-  const filename = getFileName(file);
-  const ext = extensionOf(file);
-  const tools = toolsForPath(file);
+  const multiple = files.length > 1;
+  const filename = multiple ? `${files.length} files selected` : getFileName(files[0]);
+  const extensions = [...new Set(files.map(extensionOf).filter(Boolean))];
+  const tools = toolsForPaths(files);
 
   const launch = (tool: ToolSpec) => {
-    navigate(`${tool.route}?file=${encodeURIComponent(file)}`);
+    const targetParams = new URLSearchParams();
+    for (const file of files) targetParams.append("file", file);
+    navigate(`${tool.route}?${targetParams.toString()}`);
   };
 
   if (tools.length === 0) {
@@ -47,9 +50,15 @@ export function PickTool() {
       <div className="max-w-2xl mx-auto text-center py-12 animate-fade-in-up">
         <HelpCircle className="text-text-muted mx-auto mb-3" size={32} />
         <h1 className="text-[18px] font-semibold text-text mb-1">
-          No tools support .{ext || "this file"}
+          {multiple
+            ? "No tools support this selection"
+            : `No tools support .${extensions[0] || "this file"}`}
         </h1>
-        <p className="text-[13px] text-text-secondary break-all">{filename}</p>
+        <p className="text-[13px] text-text-secondary break-all">
+          {multiple
+            ? `${files.length} files${extensions.length > 0 ? ` - ${extensions.map((ext) => `.${ext}`).join(", ")}` : ""}`
+            : filename}
+        </p>
         <p className="text-[12px] text-text-muted mt-2">
           OpenExpress supports JPG, PNG, WebP, BMP, TIFF, MP4, WebM, AVI, MOV, MKV, and PDF.
         </p>
@@ -72,8 +81,8 @@ export function PickTool() {
           className="swiss-display break-all mt-2"
           style={{
             fontWeight: 700,
-            fontSize: "clamp(1.6rem, 3vw, 2.4rem)",
-            letterSpacing: "-0.025em",
+            fontSize: 32,
+            letterSpacing: 0,
             lineHeight: 1.05,
             color: "var(--color-text)",
           }}
@@ -88,7 +97,10 @@ export function PickTool() {
             color: "var(--color-text-secondary)",
           }}
         >
-          .{ext} · {tools.length} tool{tools.length === 1 ? "" : "s"} available
+          {multiple
+            ? extensions.map((ext) => `.${ext}`).join(" / ")
+            : `.${extensions[0]}`} {" "}
+          · {tools.length} tool{tools.length === 1 ? "" : "s"} available
         </p>
       </header>
 
@@ -113,7 +125,7 @@ export function PickTool() {
                   style={{
                     fontWeight: 700,
                     fontSize: 16,
-                    letterSpacing: "-0.01em",
+                    letterSpacing: 0,
                     textTransform: "uppercase",
                     color: "var(--color-text)",
                   }}

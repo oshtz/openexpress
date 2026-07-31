@@ -1,3 +1,4 @@
+use crate::output::write_output;
 use crate::{AppError, AppResult};
 use serde::Serialize;
 
@@ -23,7 +24,10 @@ pub async fn blur_image(
 
     let img = image::open(&input_path)?;
     let blurred = img.blur(sigma);
-    blurred.save(&output_path)?;
+    let output_path = write_output(output_path, |path| {
+        blurred.save(path)?;
+        Ok(())
+    })?;
 
     let metadata =
         std::fs::metadata(&output_path).map_err(|e| AppError::from_io(e, &output_path))?;

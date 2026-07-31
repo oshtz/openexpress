@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Navigate, Routes, Route } from "react-router-dom";
 import { Layout } from "./components/layout/Layout";
 import { Home } from "./pages/Home";
 import { ImageResize } from "./pages/image/ImageResize";
@@ -24,7 +24,6 @@ import { VideoMute } from "./pages/video/VideoMute";
 import { VideoMerge } from "./pages/video/VideoMerge";
 import { PdfMerge } from "./pages/pdf/PdfMerge";
 import { ImageToPdf } from "./pages/pdf/ImageToPdf";
-import { PdfToImage } from "./pages/pdf/PdfToImage";
 import { PdfCompress } from "./pages/pdf/PdfCompress";
 import { PdfSplit } from "./pages/pdf/PdfSplit";
 import { PdfOrganize } from "./pages/pdf/PdfOrganize";
@@ -64,7 +63,6 @@ export default function App() {
         <Route path="/video/merge" element={<VideoMerge />} />
         <Route path="/pdf/merge" element={<PdfMerge />} />
         <Route path="/pdf/image-to-pdf" element={<ImageToPdf />} />
-        <Route path="/pdf/pdf-to-image" element={<PdfToImage />} />
         <Route path="/pdf/compress" element={<PdfCompress />} />
         <Route path="/pdf/split" element={<PdfSplit />} />
         <Route path="/pdf/organize" element={<PdfOrganize />} />
@@ -75,6 +73,7 @@ export default function App() {
         <Route path="/audio/volume" element={<AudioVolume />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/pick" element={<PickTool />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
   );

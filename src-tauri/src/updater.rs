@@ -376,6 +376,9 @@ async fn download_available_update(
         )));
     }
 
+    #[cfg(target_os = "windows")]
+    verify_windows_update_signature(&tmp_path)?;
+
     fs::rename(&tmp_path, &download_path)
         .map_err(|e| AppError::from_io(e, download_path.to_string_lossy()))?;
     let _ = progress.send(progress_event(downloaded, expected_total));
@@ -602,6 +605,7 @@ fn validate_macos_update_bundle(app_path: &Path, version: &str) -> AppResult<()>
             bundle_version, version
         )));
     }
+    verify_macos_update_signature(app_path)?;
     Ok(())
 }
 
@@ -620,6 +624,89 @@ fn macos_bundle_value(app_path: &Path, key: &str) -> AppResult<Option<String>> {
         .and_then(|dict| dict.get(key))
         .and_then(plist::Value::as_string)
         .map(ToOwned::to_owned))
+}
+
+#[cfg(target_os = "windows")]
+fn verify_windows_update_signature(update_path: &Path) -> AppResult<()> {
+    let current_exe = std::env::current_exe()
+        .map_err(|e| AppError::Internal(format!("locating current executable: {e}")))?;
+    let script = format!(
+        r#"$ErrorActionPreference = 'Stop'
+$current = Get-AuthenticodeSignature -LiteralPath '{current}'
+$candidate = Get-AuthenticodeSignature -LiteralPath '{candidate}'
+if ($current.Status -ne 'Valid' -or $null -eq $current.SignerCertificate) {{
+  throw 'The installed OpenExpress executable does not have a valid Authenticode signature.'
+}}
+if ($candidate.Status -ne 'Valid' -or $null -eq $candidate.SignerCertificate) {{
+  throw 'The downloaded OpenExpress update does not have a valid Authenticode signature.'
+}}
+if ($current.SignerCertificate.Subject -ne $candidate.SignerCertificate.Subject) {{
+  throw 'The downloaded OpenExpress update was signed by a different publisher.'
+}}"#,
+        current = escape_powershell_literal(&current_exe.to_string_lossy()),
+        candidate = escape_powershell_literal(&update_path.to_string_lossy()),
+    );
+
+    let output = std::process::Command::new("powershell")
+        .args([
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-Command",
+            &script,
+        ])
+        .output()
+        .map_err(|e| AppError::Internal(format!("checking update signature: {e}")))?;
+    if !output.status.success() {
+        return Err(AppError::PermissionDenied(
+            "OpenExpress could not verify the update publisher.".into(),
+        ));
+    }
+    Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn verify_macos_update_signature(app_path: &Path) -> AppResult<()> {
+    let current_bundle = current_macos_app_bundle()?;
+    let output = std::process::Command::new("codesign")
+        .args(["-d", "-r-"])
+        .arg(&current_bundle)
+        .output()
+        .map_err(|e| AppError::Internal(format!("reading app signing requirement: {e}")))?;
+    if !output.status.success() {
+        return Err(AppError::PermissionDenied(
+            "The installed OpenExpress app does not have a valid code signature.".into(),
+        ));
+    }
+
+    let requirement = parse_designated_requirement(&output.stderr).ok_or_else(|| {
+        AppError::PermissionDenied(
+            "Could not determine the installed OpenExpress signing identity.".into(),
+        )
+    })?;
+    let status = std::process::Command::new("codesign")
+        .args(["--verify", "--deep", "--strict"])
+        .arg(format!("-R={requirement}"))
+        .arg(app_path)
+        .status()
+        .map_err(|e| AppError::Internal(format!("checking update signature: {e}")))?;
+    if !status.success() {
+        return Err(AppError::PermissionDenied(
+            "The downloaded OpenExpress update has an invalid publisher signature.".into(),
+        ));
+    }
+    Ok(())
+}
+
+#[cfg(any(target_os = "macos", test))]
+fn parse_designated_requirement(output: &[u8]) -> Option<String> {
+    String::from_utf8_lossy(output)
+        .lines()
+        .find_map(|line| line.trim().strip_prefix("designated =>"))
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .map(ToOwned::to_owned)
 }
 
 #[cfg(target_os = "windows")]
@@ -804,5 +891,24 @@ mod tests {
     fn progress_without_total_uses_negative_percent() {
         let progress = progress_event(100, 0);
         assert_eq!(progress.percent, -1.0);
+    }
+
+    #[test]
+    fn parses_macos_designated_requirement() {
+        let output = b"Executable=/Applications/OpenExpress.app\n\
+designated => identifier \"com.openexpress.desktop\" and anchor apple generic\n";
+        assert_eq!(
+            parse_designated_requirement(output).as_deref(),
+            Some("identifier \"com.openexpress.desktop\" and anchor apple generic")
+        );
+    }
+
+    #[test]
+    #[cfg(target_os = "windows")]
+    fn escapes_powershell_single_quotes() {
+        assert_eq!(
+            escape_powershell_literal("C:\\O'Mer\\app.exe"),
+            "C:\\O''Mer\\app.exe"
+        );
     }
 }

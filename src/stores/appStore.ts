@@ -5,9 +5,28 @@ export interface RecentFile {
   name: string;
   tool: string;
   timestamp: number;
+  route?: string;
+  sourcePath?: string;
 }
 
 export type ToastKind = "info" | "success" | "error";
+export type JobStatus = "running" | "succeeded" | "failed" | "cancelled";
+
+export interface AppJob {
+  id: string;
+  tool: string;
+  route: string;
+  inputName?: string;
+  startedAt: number;
+  completedAt?: number;
+  status: JobStatus;
+  total: number;
+  completed: number;
+  failed: number;
+  progress: number | null;
+  outputPath?: string;
+  message?: string;
+}
 
 export interface Toast {
   id: number;
@@ -16,12 +35,20 @@ export interface Toast {
 }
 
 interface AppState {
+  accentColor: string;
   theme: "light" | "dark" | "system";
   recentFiles: RecentFile[];
+  jobs: AppJob[];
   outputDir: string;
   toasts: Toast[];
+  setAccentColor: (color: string) => void;
   setTheme: (theme: "light" | "dark" | "system") => void;
   addRecentFile: (file: RecentFile) => void;
+  removeRecentFile: (path: string) => void;
+  beginJob: (job: AppJob) => void;
+  updateJob: (id: string, update: Partial<Omit<AppJob, "id">>) => void;
+  finishJob: (id: string, status: Exclude<JobStatus, "running">, message?: string) => void;
+  clearFinishedJobs: () => void;
   setOutputDir: (dir: string) => void;
   pushToast: (kind: ToastKind, message: string) => void;
   dismissToast: (id: number) => void;
@@ -29,12 +56,45 @@ interface AppState {
 
 let toastCounter = 0;
 
+function readTheme(): AppState["theme"] {
+  const value = localStorage.getItem("theme");
+  return value === "light" || value === "dark" || value === "system" ? value : "system";
+}
+
+function readRecentFiles(): RecentFile[] {
+  try {
+    const value: unknown = JSON.parse(localStorage.getItem("recentFiles") || "[]");
+    return Array.isArray(value)
+      ? value.filter(
+          (file): file is RecentFile =>
+            typeof file === "object" &&
+            file !== null &&
+            typeof file.path === "string" &&
+            typeof file.name === "string" &&
+            typeof file.tool === "string" &&
+            typeof file.timestamp === "number" &&
+            (file.route === undefined || typeof file.route === "string") &&
+            (file.sourcePath === undefined || typeof file.sourcePath === "string"),
+        ).slice(0, 20)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
 export const useAppStore = create<AppState>((set) => ({
-  theme:
-    (localStorage.getItem("theme") as "light" | "dark" | "system") || "system",
-  recentFiles: JSON.parse(localStorage.getItem("recentFiles") || "[]"),
-  outputDir: "",
+  accentColor: localStorage.getItem("accentColor") || "#1597ff",
+  theme: readTheme(),
+  recentFiles: readRecentFiles(),
+  jobs: [],
+  outputDir: localStorage.getItem("outputDir") || "",
   toasts: [],
+
+  setAccentColor: (accentColor) => {
+    localStorage.setItem("accentColor", accentColor);
+    document.documentElement.style.setProperty("--color-accent", accentColor);
+    set({ accentColor });
+  },
 
   setTheme: (theme) => {
     localStorage.setItem("theme", theme);
@@ -49,7 +109,45 @@ export const useAppStore = create<AppState>((set) => ({
       return { recentFiles: updated };
     }),
 
-  setOutputDir: (dir) => set({ outputDir: dir }),
+  removeRecentFile: (path) =>
+    set((state) => {
+      const recentFiles = state.recentFiles.filter((file) => file.path !== path);
+      localStorage.setItem("recentFiles", JSON.stringify(recentFiles));
+      return { recentFiles };
+    }),
+
+  beginJob: (job) =>
+    set((state) => ({
+      jobs: [job, ...state.jobs.filter((item) => item.id !== job.id)].slice(0, 20),
+    })),
+
+  updateJob: (id, update) =>
+    set((state) => ({
+      jobs: state.jobs.map((job) => (job.id === id ? { ...job, ...update } : job)),
+    })),
+
+  finishJob: (id, status, message) =>
+    set((state) => ({
+      jobs: state.jobs.map((job) =>
+        job.id === id
+          ? {
+              ...job,
+              status,
+              message,
+              completedAt: Date.now(),
+              progress: status === "succeeded" ? 100 : job.progress,
+            }
+          : job,
+      ),
+    })),
+
+  clearFinishedJobs: () =>
+    set((state) => ({ jobs: state.jobs.filter((job) => job.status === "running") })),
+
+  setOutputDir: (dir) => {
+    localStorage.setItem("outputDir", dir);
+    set({ outputDir: dir });
+  },
 
   pushToast: (kind, message) =>
     set((state) => ({
@@ -77,3 +175,8 @@ window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () 
     applyTheme("system");
   }
 });
+
+document.documentElement.style.setProperty(
+  "--color-accent",
+  useAppStore.getState().accentColor,
+);

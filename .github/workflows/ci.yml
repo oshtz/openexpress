@@ -21,14 +21,29 @@ jobs:
 
       - run: npm ci
 
+      - name: Verify release version alignment
+        run: npm run check:version
+
+      - name: Audit production dependencies
+        run: npm run audit:prod
+
       - name: Type-check
         run: npx tsc --noEmit -p tsconfig.app.json
 
       - name: Lint
         run: npm run lint
 
+      - name: Unit tests
+        run: npm test
+
       - name: Build frontend
         run: npm run build
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Route smoke
+        run: npm run smoke:routes
 
   backend:
     name: Backend (cargo fmt + clippy + test)
@@ -67,3 +82,40 @@ jobs:
       - name: test
         working-directory: src-tauri
         run: cargo test --lib
+
+  backend-msrv:
+    name: Backend (Rust 1.88 MSRV)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install stable Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Rust 1.88
+        run: rustup toolchain install 1.88.0 --profile minimal
+
+      - name: Install Linux GTK deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libssl-dev
+
+      - name: Check locked dependency graph
+        working-directory: src-tauri
+        run: cargo +1.88.0 check --locked
+
+  rust-security:
+    name: Rust security audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --version 0.22.2 --locked
+
+      - name: Audit locked dependencies
+        working-directory: src-tauri
+        run: cargo audit

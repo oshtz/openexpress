@@ -1,3 +1,4 @@
+use crate::output::OutputFile;
 use crate::{AppError, AppResult};
 use ffmpeg_sidecar::command::FfmpegCommand;
 use ffmpeg_sidecar::event::FfmpegEvent;
@@ -23,11 +24,18 @@ pub(crate) fn run_ffmpeg(
     args: &[&str],
     progress: Option<&Channel<f32>>,
     cancel: &AtomicBool,
-) -> AppResult<()> {
+) -> AppResult<String> {
     super::ensure_ffmpeg()?;
+    let requested_path = args
+        .last()
+        .ok_or_else(|| AppError::InvalidInput("ffmpeg output path is missing".into()))?;
+    let output = OutputFile::new(*requested_path)?;
+    let temp_path = output.path().to_string_lossy().into_owned();
+    let mut safe_args = args[..args.len() - 1].to_vec();
+    safe_args.push(&temp_path);
 
     let mut child = FfmpegCommand::new()
-        .args(args)
+        .args(&safe_args)
         .spawn()
         .map_err(|e| AppError::FfmpegFailed(format!("Failed to spawn ffmpeg: {e}")))?;
 
@@ -73,10 +81,11 @@ pub(crate) fn run_ffmpeg(
     }
 
     if status.success() {
+        let output_path = output.commit()?.to_string_lossy().into_owned();
         if let Some(ch) = progress {
             let _ = ch.send(100.0);
         }
-        Ok(())
+        Ok(output_path)
     } else {
         Err(AppError::FfmpegFailed(last_error.unwrap_or_else(|| {
             format!("ffmpeg exited with status {:?}", status.code())
@@ -202,7 +211,7 @@ pub async fn trim_video(
     let duration_str = format!("{:.3}", duration);
 
     let guard = JobGuard::new(&registry, job_id);
-    run_ffmpeg(
+    let output_path = run_ffmpeg(
         &[
             "-i",
             &input_path,
@@ -234,7 +243,7 @@ pub async fn convert_video(
     registry: tauri::State<'_, CancellationRegistry>,
 ) -> AppResult<VideoResult> {
     let guard = JobGuard::new(&registry, job_id);
-    run_ffmpeg(
+    let output_path = run_ffmpeg(
         &["-i", &input_path, "-y", &output_path],
         Some(&progress),
         guard.flag(),
@@ -265,7 +274,7 @@ pub async fn resize_video(
     let scale = format!("scale={}:{}", width, height);
     let guard = JobGuard::new(&registry, job_id);
 
-    run_ffmpeg(
+    let output_path = run_ffmpeg(
         &[
             "-i",
             &input_path,
@@ -303,7 +312,7 @@ pub async fn video_to_gif(
     let filter = format!("fps={fps},scale={width}:-1:flags=lanczos");
     let guard = JobGuard::new(&registry, job_id);
 
-    run_ffmpeg(
+    let output_path = run_ffmpeg(
         &["-i", &input_path, "-vf", &filter, "-y", &output_path],
         Some(&progress),
         guard.flag(),
@@ -334,7 +343,7 @@ pub async fn change_speed(
     let audio_filter = format!("atempo={}", speed.clamp(0.5, 2.0));
     let guard = JobGuard::new(&registry, job_id);
 
-    run_ffmpeg(
+    let output_path = run_ffmpeg(
         &[
             "-i",
             &input_path,
@@ -364,7 +373,7 @@ pub async fn extract_audio(
     registry: tauri::State<'_, CancellationRegistry>,
 ) -> AppResult<VideoResult> {
     let guard = JobGuard::new(&registry, job_id);
-    run_ffmpeg(
+    let output_path = run_ffmpeg(
         &["-i", &input_path, "-vn", "-y", &output_path],
         Some(&progress),
         guard.flag(),
@@ -398,7 +407,7 @@ pub async fn crop_video(
     let crop = format!("crop={width}:{height}:{x}:{y}");
     let guard = JobGuard::new(&registry, job_id);
 
-    run_ffmpeg(
+    let output_path = run_ffmpeg(
         &[
             "-i",
             &input_path,
@@ -454,7 +463,7 @@ pub async fn reverse_video(
             &output_path,
         ]
     };
-    run_ffmpeg(&args, Some(&progress), guard.flag())?;
+    let output_path = run_ffmpeg(&args, Some(&progress), guard.flag())?;
 
     Ok(VideoResult {
         file_size: file_size(&output_path),
@@ -473,7 +482,7 @@ pub async fn mute_video(
     registry: tauri::State<'_, CancellationRegistry>,
 ) -> AppResult<VideoResult> {
     let guard = JobGuard::new(&registry, job_id);
-    run_ffmpeg(
+    let output_path = run_ffmpeg(
         &["-i", &input_path, "-an", "-c:v", "copy", "-y", &output_path],
         Some(&progress),
         guard.flag(),
@@ -529,7 +538,7 @@ pub async fn merge_videos(
     let arg_refs: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
 
     let guard = JobGuard::new(&registry, job_id);
-    run_ffmpeg(&arg_refs, Some(&progress), guard.flag())?;
+    let output_path = run_ffmpeg(&arg_refs, Some(&progress), guard.flag())?;
 
     Ok(VideoResult {
         file_size: file_size(&output_path),

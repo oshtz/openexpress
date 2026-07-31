@@ -104,7 +104,7 @@ export function TrimTimeline({
   return (
     <div className="surface-elevated p-4 space-y-2 animate-fade-in-up">
       <div className="flex items-center justify-between mb-1">
-        <span className="text-[11px] font-medium text-text-muted uppercase tracking-wide">
+        <span className="text-[11px] font-medium text-text-muted uppercase">
           Timeline
         </span>
         <span className="text-[12px] font-semibold text-primary tabular-nums">

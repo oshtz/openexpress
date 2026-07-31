@@ -1,7 +1,7 @@
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
-    App, AppHandle, Manager, Window, WindowEvent, Wry,
+    App, AppHandle, Manager,
 };
 
 const MAIN_WINDOW_LABEL: &str = "main";
@@ -23,23 +23,7 @@ pub fn tray_menu_action(id: &str) -> Option<TrayMenuAction> {
 }
 
 pub fn setup(app: &mut App) -> tauri::Result<()> {
-    #[cfg(target_os = "macos")]
-    app.set_activation_policy(tauri::ActivationPolicy::Accessory);
-
     create_tray(app)
-}
-
-pub fn handle_window_event(window: &Window<Wry>, event: &WindowEvent) {
-    if window.label() != MAIN_WINDOW_LABEL {
-        return;
-    }
-
-    if let WindowEvent::CloseRequested { api, .. } = event {
-        api.prevent_close();
-        if let Err(e) = window.hide() {
-            log::warn!("failed to hide main window: {e}");
-        }
-    }
 }
 
 pub fn show_main_window(app: &AppHandle) {

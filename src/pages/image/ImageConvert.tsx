@@ -80,6 +80,7 @@ export function ImageConvert() {
     <FileDropzone
       accept={ACCEPTED}
       multiple
+      selectedPaths={inputPaths}
       onFiles={handleFiles}
       label="Drop one or more images here or click to browse"
     />

@@ -30,10 +30,9 @@ const TOOL_ROUTES: ToolRoute[] = [
   { path: "/video/reverse", title: "Reverse Video", action: /reverse video/i },
   { path: "/video/mute", title: "Mute Video", action: /mute video/i },
   { path: "/video/merge", title: "Merge Videos", action: /merge videos/i },
-  // PDF (6)
+  // PDF (5)
   { path: "/pdf/merge", title: "Merge PDFs", action: /merge pdfs/i },
   { path: "/pdf/image-to-pdf", title: "Images to PDF", action: /convert to pdf/i },
-  { path: "/pdf/pdf-to-image", title: "PDF to Images", action: /extract images/i },
   { path: "/pdf/compress", title: "Compress PDF", action: /compress pdf/i },
   { path: "/pdf/split", title: "Split PDF", action: /extract pages/i },
   { path: "/pdf/organize", title: "Organize Pages", action: /save .* pdf/i },
@@ -55,20 +54,32 @@ test.describe("tool route smoke", () => {
       await expect(page.getByText(/01\s*Input/i)).toBeVisible();
       await expect(page.getByText(/02\s*Settings/i)).toBeVisible();
       await expect(page.getByText(/drop .*here|drop files here/i).first()).toBeVisible();
+      await expect(page.getByText("Choose a file to continue")).toBeVisible();
       await expect(page.getByRole("button", { name: tool.action }).last()).toBeDisabled();
     });
   }
 });
 
-test("32 tool routes are covered", () => {
-  expect(TOOL_ROUTES).toHaveLength(32);
+test("31 tool routes are covered", () => {
+  expect(TOOL_ROUTES).toHaveLength(31);
 });
 
-test("home exposes the four top-level tool categories", async ({ page }) => {
+test("home opens files and switches between the four tool categories", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: /edit media/i })).toBeVisible();
-  await expect(page.getByRole("button", { name: /image/i }).first()).toBeVisible();
-  await expect(page.getByRole("button", { name: /video/i }).first()).toBeVisible();
-  await expect(page.getByRole("button", { name: /pdf/i }).first()).toBeVisible();
-  await expect(page.getByRole("button", { name: /audio/i }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Drop file or press Ctrl+O" })).toBeVisible();
+
+  const categories = [
+    { name: "Image tools", action: /^resize\b/i },
+    { name: "Video tools", action: /^trim\b/i },
+    { name: "PDF tools", action: /^merge\b/i },
+    { name: "Audio tools", action: /^trim\b/i },
+  ];
+
+  for (const category of categories) {
+    const selector = page.getByRole("radio", { name: category.name });
+    await selector.click();
+    await expect(selector).toBeChecked();
+    await expect(page.getByRole("button", { name: category.action }).first()).toBeVisible();
+  }
 });

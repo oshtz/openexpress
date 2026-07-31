@@ -1,3 +1,4 @@
+use crate::output::write_output;
 use crate::{AppError, AppResult};
 use serde::Serialize;
 use std::path::Path;
@@ -44,8 +45,10 @@ pub async fn vector_trace_image(
 
     // vtracer reads the file itself; it returns plain-string errors which we
     // remap into a typed Internal error to keep the boundary contract.
-    vtracer::convert_image_to_svg(Path::new(&input_path), Path::new(&output_path), config)
-        .map_err(|e| AppError::Internal(format!("vtracer: {e}")))?;
+    let output_path = write_output(output_path, |path| {
+        vtracer::convert_image_to_svg(Path::new(&input_path), path, config)
+            .map_err(|e| AppError::Internal(format!("vtracer: {e}")))
+    })?;
 
     let metadata =
         std::fs::metadata(&output_path).map_err(|e| AppError::from_io(e, &output_path))?;

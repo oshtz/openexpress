@@ -6,14 +6,12 @@ use std::{
 
 use tauri::{AppHandle, Emitter};
 
-use crate::{cli::LaunchAction, desktop_lifecycle, shell::tools};
+use crate::{cli::LaunchAction, desktop_lifecycle};
 
 static APP_HANDLE: OnceLock<AppHandle> = OnceLock::new();
 
 extern "C" {
-    fn openexpress_register_services_provider(
-        callback: extern "C" fn(*const c_char, *const c_char),
-    );
+    fn openexpress_register_services_provider(callback: extern "C" fn(*const *const c_char, usize));
 }
 
 pub fn register(app: AppHandle) {
@@ -25,28 +23,29 @@ pub fn register(app: AppHandle) {
     }
 }
 
-extern "C" fn handle_service(tool_id: *const c_char, file_path: *const c_char) {
+extern "C" fn handle_service(file_paths: *const *const c_char, file_count: usize) {
     let Some(app) = APP_HANDLE.get().cloned() else {
         log::warn!("macOS Services callback fired before app handle was registered");
         return;
     };
-    let Some(tool_id) = c_string(tool_id) else {
-        log::warn!("macOS Services callback was missing a tool id");
+    if file_paths.is_null() || file_count == 0 {
+        log::warn!("macOS Services callback was missing file paths");
         return;
-    };
-    let Some(file_path) = c_string(file_path) else {
-        log::warn!("macOS Services callback was missing a file path");
+    }
+
+    let files = unsafe { std::slice::from_raw_parts(file_paths, file_count) }
+        .iter()
+        .filter_map(|path| c_string(*path))
+        .collect::<Vec<_>>();
+    if files.is_empty() {
+        log::warn!("macOS Services callback contained no valid file paths");
         return;
-    };
-    let Some(spec) = tools::find(&tool_id) else {
-        log::warn!("macOS Services callback used unknown tool id: {tool_id}");
-        return;
-    };
+    }
 
     let action = LaunchAction {
-        tool: Some(spec.id.to_string()),
-        route: spec.route.to_string(),
-        file: Some(file_path),
+        tool: None,
+        route: "/pick".to_string(),
+        files,
     };
 
     std::thread::spawn(move || {

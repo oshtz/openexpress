@@ -58,6 +58,7 @@ export function PdfMerge() {
   const upload = (
     <FileDropzone
       multiple
+      selectedPaths={inputPaths}
       accept={["pdf"]}
       onFiles={handleFiles}
       label="Drop PDF files here or click to browse"

@@ -28,6 +28,42 @@ const CURSORS: Record<Handle, string> = {
   se: "cursor-se-resize",
 };
 
+function clampCrop(crop: CropRect, bounds: { w: number; h: number }): CropRect {
+  const minSize = 16;
+  let { x, y, width, height } = crop;
+  width = Math.max(minSize, Math.min(width, bounds.w));
+  height = Math.max(minSize, Math.min(height, bounds.h));
+  x = Math.max(0, Math.min(x, bounds.w - width));
+  y = Math.max(0, Math.min(y, bounds.h - height));
+  return { x, y, width, height };
+}
+
+// eslint-disable-next-line react-refresh/only-export-components -- exported for the keyboard-control test
+export function cropFromArrowKey(
+  crop: CropRect,
+  key: string,
+  resize: boolean,
+  aspectRatio: number | null,
+  bounds: { w: number; h: number },
+): CropRect {
+  const dx = key === "ArrowLeft" ? -1 : key === "ArrowRight" ? 1 : 0;
+  const dy = key === "ArrowUp" ? -1 : key === "ArrowDown" ? 1 : 0;
+  const next = { ...crop };
+
+  if (!resize) {
+    next.x += dx;
+    next.y += dy;
+  } else if (dx !== 0) {
+    next.width += dx;
+    if (aspectRatio) next.height = Math.round(next.width / aspectRatio);
+  } else {
+    next.height += dy;
+    if (aspectRatio) next.width = Math.round(next.height * aspectRatio);
+  }
+
+  return clampCrop(next, bounds);
+}
+
 export function CropCanvas({ path, aspectRatio, onChange }: CropCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [naturalSize, setNaturalSize] = useState({ w: 0, h: 0 });
@@ -52,15 +88,7 @@ export function CropCanvas({ path, aspectRatio, onChange }: CropCanvasProps) {
   );
 
   const clamp = useCallback(
-    (c: CropRect): CropRect => {
-      const minSize = 16;
-      let { x, y, width, height } = c;
-      width = Math.max(minSize, Math.min(width, displaySize.w));
-      height = Math.max(minSize, Math.min(height, displaySize.h));
-      x = Math.max(0, Math.min(x, displaySize.w - width));
-      y = Math.max(0, Math.min(y, displaySize.h - height));
-      return { x, y, width, height };
-    },
+    (c: CropRect): CropRect => clampCrop(c, displaySize),
     [displaySize],
   );
 
@@ -198,6 +226,23 @@ export function CropCanvas({ path, aspectRatio, onChange }: CropCanvasProps) {
     };
   }, [aspectRatio, clamp, onChange, toImageCoords]);
 
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent) => {
+      if (!event.key.startsWith("Arrow")) return;
+      event.preventDefault();
+      const next = cropFromArrowKey(
+        crop,
+        event.key,
+        event.shiftKey,
+        aspectRatio,
+        displaySize,
+      );
+      setCrop(next);
+      onChange(toImageCoords(next));
+    },
+    [aspectRatio, crop, displaySize, onChange, toImageCoords],
+  );
+
   const handles: { handle: Handle; top: number; left: number }[] =
     displaySize.w > 0
       ? [
@@ -217,6 +262,9 @@ export function CropCanvas({ path, aspectRatio, onChange }: CropCanvasProps) {
       ref={containerRef}
       className="overflow-hidden bg-bg-secondary border border-border-subtle animate-fade-in-up"
     >
+      <span id="crop-keyboard-help" className="sr-only">
+        Use arrow keys to move the crop. Hold Shift and use arrow keys to resize it.
+      </span>
       <div
         className="relative mx-auto"
         style={{ width: displaySize.w || "100%", height: displaySize.h || "auto" }}
@@ -264,6 +312,9 @@ export function CropCanvas({ path, aspectRatio, onChange }: CropCanvasProps) {
             <div
               role="group"
               aria-label="Crop region"
+              aria-describedby="crop-keyboard-help"
+              tabIndex={0}
+              onKeyDown={handleKeyDown}
               className="absolute border-2 border-white/80 cursor-move"
               style={{
                 top: crop.y,

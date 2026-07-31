@@ -17,6 +17,10 @@ export function ProgressBar({ percent, label, onCancel }: ProgressBarProps) {
         background: "var(--color-bg-secondary)",
       }}
     >
+      <div className="swiss-label mb-2">
+        <span className="mr-2 font-mono">03</span>
+        Processing
+      </div>
       <div className="flex justify-between items-baseline mb-3">
         <span
           style={{

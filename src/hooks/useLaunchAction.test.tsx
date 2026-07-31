@@ -1,7 +1,7 @@
 import { render, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { useLaunchAction } from "./useLaunchAction";
+import { targetForLaunch, useLaunchAction } from "./useLaunchAction";
 
 function HookProbe() {
   useLaunchAction();
@@ -34,5 +34,15 @@ describe("useLaunchAction", () => {
 
     await waitFor(() => expect(unhandled).not.toHaveBeenCalled());
     window.removeEventListener("unhandledrejection", unhandled);
+  });
+
+  it("preserves every selected file in the target URL", () => {
+    expect(
+      targetForLaunch({
+        tool: null,
+        route: "/pick",
+        files: ["C:\\first image.jpg", "C:\\second.png"],
+      }),
+    ).toBe("/pick?file=C%3A%5Cfirst+image.jpg&file=C%3A%5Csecond.png");
   });
 });

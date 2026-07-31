@@ -3,9 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
 interface LaunchAction {
-  tool: string;
+  tool: string | null;
   route: string;
-  file: string | null;
+  files: string[];
 }
 
 interface TauriEventRuntime {
@@ -18,11 +18,19 @@ function canUseTauriEvents(): boolean {
   return typeof internals?.transformCallback === "function";
 }
 
+export function targetForLaunch({ route, files }: LaunchAction): string {
+  if (files.length === 0) return route;
+
+  const params = new URLSearchParams();
+  for (const file of files) params.append("file", file);
+  return `${route}?${params.toString()}`;
+}
+
 /**
  * Listens for `launch-action` events emitted by the Rust side when the app
  * is invoked from the OS shell (e.g. right-click → "Resize with OpenExpress").
- * Navigates to the target tool with `?file=<encoded>` so the tool page can
- * pick it up via `usePrefilledFile`.
+ * Navigates to the target tool with repeated `?file=<encoded>` parameters so
+ * the tool page can pick the complete selection up via `usePrefilledFile`.
  */
 export function useLaunchAction() {
   const navigate = useNavigate();
@@ -32,11 +40,7 @@ export function useLaunchAction() {
 
     let unlisten: UnlistenFn | undefined;
     void listen<LaunchAction>("launch-action", (event) => {
-      const { route, file } = event.payload;
-      const target = file
-        ? `${route}?file=${encodeURIComponent(file)}`
-        : route;
-      navigate(target);
+      navigate(targetForLaunch(event.payload));
     }).then((fn) => {
       unlisten = fn;
     }).catch(() => {});

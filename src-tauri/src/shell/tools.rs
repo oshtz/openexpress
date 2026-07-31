@@ -31,6 +31,8 @@ pub struct ToolSpec {
         )
     )]
     pub extensions: &'static [&'static str],
+    /// Whether one invocation can consume multiple selected files.
+    pub accepts_multiple: bool,
 }
 
 const IMAGE_EXTS: &[&str] = &["jpg", "jpeg", "png", "webp", "bmp", "tiff"];
@@ -45,66 +47,77 @@ const TOOLS: &[ToolSpec] = &[
         label: "Resize…",
         route: "/image/resize",
         extensions: IMAGE_EXTS,
+        accepts_multiple: true,
     },
     ToolSpec {
         id: "image-crop",
         label: "Crop…",
         route: "/image/crop",
         extensions: IMAGE_EXTS,
+        accepts_multiple: false,
     },
     ToolSpec {
         id: "image-convert",
         label: "Convert format…",
         route: "/image/convert",
         extensions: IMAGE_EXTS,
+        accepts_multiple: true,
     },
     ToolSpec {
         id: "image-compress",
         label: "Compress…",
         route: "/image/compress",
         extensions: IMAGE_EXTS,
+        accepts_multiple: true,
     },
     ToolSpec {
         id: "image-rotate",
         label: "Rotate / Flip…",
         route: "/image/rotate",
         extensions: IMAGE_EXTS,
+        accepts_multiple: true,
     },
     ToolSpec {
         id: "image-adjust",
         label: "Adjust…",
         route: "/image/adjust",
         extensions: IMAGE_EXTS,
+        accepts_multiple: true,
     },
     ToolSpec {
         id: "image-sharpen",
         label: "Sharpen…",
         route: "/image/sharpen",
         extensions: IMAGE_EXTS,
+        accepts_multiple: true,
     },
     ToolSpec {
         id: "image-blur",
         label: "Blur…",
         route: "/image/blur",
         extensions: IMAGE_EXTS,
+        accepts_multiple: true,
     },
     ToolSpec {
         id: "image-vector-trace",
         label: "Trace to SVG…",
         route: "/image/vector-trace",
         extensions: IMAGE_EXTS,
+        accepts_multiple: true,
     },
     ToolSpec {
         id: "image-remove-bg",
         label: "Remove background...",
         route: "/image/remove-bg",
         extensions: IMAGE_EXTS,
+        accepts_multiple: false,
     },
     ToolSpec {
         id: "image-upscale",
         label: "AI upscale…",
         route: "/image/upscale",
         extensions: IMAGE_EXTS,
+        accepts_multiple: false,
     },
     // Video
     ToolSpec {
@@ -112,60 +125,70 @@ const TOOLS: &[ToolSpec] = &[
         label: "Trim…",
         route: "/video/trim",
         extensions: VIDEO_EXTS,
+        accepts_multiple: false,
     },
     ToolSpec {
         id: "video-convert",
         label: "Convert format…",
         route: "/video/convert",
         extensions: VIDEO_EXTS,
+        accepts_multiple: true,
     },
     ToolSpec {
         id: "video-resize",
         label: "Resize…",
         route: "/video/resize",
         extensions: VIDEO_EXTS,
+        accepts_multiple: true,
     },
     ToolSpec {
         id: "video-to-gif",
         label: "Convert to GIF…",
         route: "/video/gif",
         extensions: VIDEO_EXTS,
+        accepts_multiple: true,
     },
     ToolSpec {
         id: "video-speed",
         label: "Change speed…",
         route: "/video/speed",
         extensions: VIDEO_EXTS,
+        accepts_multiple: true,
     },
     ToolSpec {
         id: "video-audio",
         label: "Extract audio…",
         route: "/video/audio",
         extensions: VIDEO_EXTS,
+        accepts_multiple: true,
     },
     ToolSpec {
         id: "video-crop",
         label: "Crop…",
         route: "/video/crop",
         extensions: VIDEO_EXTS,
+        accepts_multiple: false,
     },
     ToolSpec {
         id: "video-reverse",
         label: "Reverse…",
         route: "/video/reverse",
         extensions: VIDEO_EXTS,
+        accepts_multiple: true,
     },
     ToolSpec {
         id: "video-mute",
         label: "Mute / remove audio…",
         route: "/video/mute",
         extensions: VIDEO_EXTS,
+        accepts_multiple: true,
     },
     ToolSpec {
         id: "video-merge",
         label: "Merge with another…",
         route: "/video/merge",
         extensions: VIDEO_EXTS,
+        accepts_multiple: true,
     },
     // PDF
     ToolSpec {
@@ -173,30 +196,28 @@ const TOOLS: &[ToolSpec] = &[
         label: "Merge...",
         route: "/pdf/merge",
         extensions: PDF_EXTS,
+        accepts_multiple: true,
     },
     ToolSpec {
         id: "pdf-compress",
         label: "Compress…",
         route: "/pdf/compress",
         extensions: PDF_EXTS,
-    },
-    ToolSpec {
-        id: "pdf-to-image",
-        label: "Convert to images…",
-        route: "/pdf/pdf-to-image",
-        extensions: PDF_EXTS,
+        accepts_multiple: true,
     },
     ToolSpec {
         id: "pdf-split",
         label: "Split / extract pages…",
         route: "/pdf/split",
         extensions: PDF_EXTS,
+        accepts_multiple: false,
     },
     ToolSpec {
         id: "pdf-organize",
         label: "Organize pages…",
         route: "/pdf/organize",
         extensions: PDF_EXTS,
+        accepts_multiple: false,
     },
     // Cross-category: image → PDF
     ToolSpec {
@@ -204,6 +225,7 @@ const TOOLS: &[ToolSpec] = &[
         label: "Convert to PDF…",
         route: "/pdf/image-to-pdf",
         extensions: IMAGE_EXTS,
+        accepts_multiple: true,
     },
     // Audio
     ToolSpec {
@@ -211,30 +233,35 @@ const TOOLS: &[ToolSpec] = &[
         label: "Trim…",
         route: "/audio/trim",
         extensions: AUDIO_EXTS,
+        accepts_multiple: false,
     },
     ToolSpec {
         id: "audio-convert",
         label: "Convert format…",
         route: "/audio/convert",
         extensions: AUDIO_EXTS,
+        accepts_multiple: false,
     },
     ToolSpec {
         id: "audio-fade-in",
         label: "Fade in…",
         route: "/audio/fade-in",
         extensions: AUDIO_EXTS,
+        accepts_multiple: false,
     },
     ToolSpec {
         id: "audio-fade-out",
         label: "Fade out…",
         route: "/audio/fade-out",
         extensions: AUDIO_EXTS,
+        accepts_multiple: false,
     },
     ToolSpec {
         id: "audio-volume",
         label: "Adjust volume…",
         route: "/audio/volume",
         extensions: AUDIO_EXTS,
+        accepts_multiple: false,
     },
 ];
 
@@ -274,7 +301,6 @@ pub fn all_extensions() -> Vec<&'static str> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashSet;
 
     #[test]
     fn every_tool_has_unique_id() {
@@ -287,7 +313,7 @@ mod tests {
 
     #[test]
     fn shell_catalog_covers_all_routed_tools() {
-        assert_eq!(tools().len(), 32);
+        assert_eq!(tools().len(), 31);
         assert!(find("image-remove-bg").is_some());
         assert!(find("pdf-merge").is_some());
     }
@@ -301,7 +327,8 @@ mod tests {
 
     #[test]
     fn find_returns_some_for_known_id() {
-        assert!(find("image-resize").is_some());
+        assert!(find("image-resize").is_some_and(|tool| tool.accepts_multiple));
+        assert!(find("image-crop").is_some_and(|tool| !tool.accepts_multiple));
     }
 
     #[test]
@@ -321,7 +348,7 @@ mod tests {
     }
 
     #[test]
-    fn macos_services_plist_advertises_every_tool() {
+    fn macos_services_plist_advertises_one_filtered_picker() {
         let plist =
             plist::Value::from_reader_xml(std::io::Cursor::new(include_bytes!("../../Info.plist")))
                 .expect("Info.plist should be valid XML plist");
@@ -331,50 +358,42 @@ mod tests {
             .and_then(plist::Value::as_array)
             .expect("Info.plist should declare NSServices");
 
+        assert_eq!(services.len(), 1, "macOS should expose one clean Service");
+
+        let service = services[0]
+            .as_dictionary()
+            .expect("service should be a dict");
         assert_eq!(
-            services.len(),
-            tools().len(),
-            "macOS Services should match the shell tool catalog"
+            service.get("NSMessage").and_then(plist::Value::as_string),
+            Some("openexpressService")
+        );
+        assert_eq!(
+            service.get("NSPortName").and_then(plist::Value::as_string),
+            Some("OpenExpress")
+        );
+        assert!(
+            service
+                .get("NSRequiredContext")
+                .and_then(plist::Value::as_dictionary)
+                .is_some(),
+            "service should include NSRequiredContext so it appears automatically"
         );
 
-        let mut advertised = HashSet::new();
-        for service in services {
-            let service = service.as_dictionary().expect("service should be a dict");
-            assert_eq!(
-                service.get("NSMessage").and_then(plist::Value::as_string),
-                Some("openexpressService")
-            );
-            assert_eq!(
-                service.get("NSPortName").and_then(plist::Value::as_string),
-                Some("OpenExpress")
-            );
+        let file_types = service
+            .get("NSSendFileTypes")
+            .and_then(plist::Value::as_array)
+            .expect("service should declare file UTIs");
+        for expected in [
+            "public.image",
+            "public.movie",
+            "public.audio",
+            "com.adobe.pdf",
+        ] {
             assert!(
-                service
-                    .get("NSRequiredContext")
-                    .and_then(plist::Value::as_dictionary)
-                    .is_some(),
-                "service should include NSRequiredContext so it appears automatically"
-            );
-            assert!(
-                service
-                    .get("NSSendFileTypes")
-                    .and_then(plist::Value::as_array)
-                    .is_some_and(|types| !types.is_empty()),
-                "service should declare at least one file UTI"
-            );
-            advertised.insert(
-                service
-                    .get("NSUserData")
-                    .and_then(plist::Value::as_string)
-                    .expect("service should carry the tool id in NSUserData"),
-            );
-        }
-
-        for tool in tools() {
-            assert!(
-                advertised.contains(tool.id),
-                "{} missing from macOS Services plist",
-                tool.id
+                file_types
+                    .iter()
+                    .any(|value| value.as_string() == Some(expected)),
+                "missing macOS Service UTI: {expected}"
             );
         }
     }

@@ -77,6 +77,7 @@ export function VideoSpeed() {
     <FileDropzone
       accept={VIDEO_EXTENSIONS}
       multiple
+      selectedPaths={inputPaths}
       onFiles={handleFiles}
       label="Drop one or more videos here or click to browse"
     />

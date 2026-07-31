@@ -1,4 +1,5 @@
 use super::helpers::clone_object_deep;
+use crate::output::write_output;
 use crate::{AppError, AppResult};
 use lopdf::{dictionary, Document, Object, ObjectId};
 use serde::{Deserialize, Serialize};
@@ -95,8 +96,11 @@ pub async fn organize_pdf(
     });
     out.trailer.set("Root", catalog_id);
 
-    out.save(&output_path)
-        .map_err(|e| AppError::from_io(e, &output_path))?;
+    let output_path = write_output(output_path, |path| {
+        out.save(path)
+            .map(|_| ())
+            .map_err(|error| AppError::from_io(error, path.to_string_lossy()))
+    })?;
 
     let file_size = std::fs::metadata(&output_path)
         .map(|m| m.len())

@@ -26,23 +26,31 @@ const version = process.env.UPDATE_VERSION ?? tag.replace(/^v/i, "");
 const baseUrl = process.env.UPDATE_BASE_URL ?? `https://github.com/${repo}/releases/download/${tag}`;
 const windowsAsset = join(assetDir, "OpenExpress-Portable.exe");
 const macosAsset = join(assetDir, "OpenExpress.app.zip");
+const includeWindowsUpdate = process.env.INCLUDE_WINDOWS_UPDATE !== "false";
 
-for (const path of [windowsAsset, macosAsset]) {
+for (const path of [macosAsset, ...(includeWindowsUpdate ? [windowsAsset] : [])]) {
   if (!existsSync(path)) throw new Error(`Missing release asset: ${path}`);
+}
+
+const platforms = {
+  [process.env.MACOS_UPDATE_PLATFORM ?? "darwin-aarch64"]: asset(
+    macosAsset,
+    `${baseUrl}/${basename(macosAsset)}`,
+    "com.openexpress.desktop",
+  ),
+};
+if (includeWindowsUpdate) {
+  platforms["windows-x86_64"] = asset(
+    windowsAsset,
+    `${baseUrl}/${basename(windowsAsset)}`,
+  );
 }
 
 const manifest = {
   version,
   pub_date: process.env.UPDATE_PUB_DATE ?? new Date().toISOString(),
   notes: process.env.UPDATE_NOTES ?? "Initial OpenExpress release.",
-  platforms: {
-    "windows-x86_64": asset(windowsAsset, `${baseUrl}/${basename(windowsAsset)}`),
-    [process.env.MACOS_UPDATE_PLATFORM ?? "darwin-aarch64"]: asset(
-      macosAsset,
-      `${baseUrl}/${basename(macosAsset)}`,
-      "com.openexpress.desktop",
-    ),
-  },
+  platforms,
 };
 
 mkdirSync(assetDir, { recursive: true });

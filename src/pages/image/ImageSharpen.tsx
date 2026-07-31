@@ -79,6 +79,7 @@ export function ImageSharpen() {
     <FileDropzone
       accept={IMAGE_EXTS}
       multiple
+      selectedPaths={inputPaths}
       onFiles={handleFiles}
       label="Drop one or more images here or click to browse"
     />

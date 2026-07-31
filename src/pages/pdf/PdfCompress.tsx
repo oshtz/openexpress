@@ -82,6 +82,7 @@ export function PdfCompress() {
     <FileDropzone
       accept={["pdf"]}
       multiple
+      selectedPaths={inputPaths}
       onFiles={handleFiles}
       label="Drop one or more PDFs here or click to browse"
     />
@@ -191,7 +192,7 @@ export function PdfCompress() {
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-text-muted uppercase tracking-wide font-medium text-[10px]">
+      <div className="text-text-muted uppercase font-medium text-[10px]">
         {label}
       </div>
       <div className="text-text font-semibold text-[14px] tabular-nums">{value}</div>

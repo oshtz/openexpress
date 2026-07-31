@@ -1,5 +1,8 @@
 import { useCallback, useRef, useState } from "react";
 import { type AppError, toAppError } from "../lib/errors";
+import { useAppStore } from "../stores/appStore";
+import { toolForRoute } from "../lib/tools";
+import { getFileName } from "../lib/utils";
 
 export interface BatchItemResult<I, R> {
   item: I;
@@ -53,9 +56,30 @@ export function useBatch<I, R>(): BatchHandle<I, R> {
   // Cancellation flag is held in a ref so the async loop can read the
   // freshest value without needing the closure to refresh on each render.
   const cancelledRef = useRef(false);
+  const beginJob = useAppStore((s) => s.beginJob);
+  const updateJob = useAppStore((s) => s.updateJob);
+  const finishJob = useAppStore((s) => s.finishJob);
 
   const start = useCallback(
     async (items: I[], run: (item: I) => Promise<R>): Promise<void> => {
+      const route = window.location.pathname;
+      const jobId = newBatchJobId();
+      const first = items[0];
+      let failures = 0;
+      let completedItems = 0;
+      let outputPath: string | undefined;
+      beginJob({
+        id: jobId,
+        tool: `${toolForRoute(route)?.label ?? "Batch"} batch`,
+        route,
+        inputName: typeof first === "string" ? getFileName(first) : undefined,
+        startedAt: Date.now(),
+        status: "running",
+        total: items.length,
+        completed: 0,
+        failed: 0,
+        progress: 0,
+      });
       cancelledRef.current = false;
       setState({
         running: true,
@@ -74,10 +98,28 @@ export function useBatch<I, R>(): BatchHandle<I, R> {
         try {
           const result = await run(item);
           outcome = { item, result, error: null };
+          if (!outputPath && typeof result === "object" && result !== null) {
+            const output = result as { output_path?: unknown; output_paths?: unknown };
+            outputPath =
+              typeof output.output_path === "string"
+                ? output.output_path
+                : Array.isArray(output.output_paths)
+                  ? output.output_paths.find((path): path is string => typeof path === "string")
+                  : undefined;
+          }
         } catch (e) {
           outcome = { item, result: null, error: toAppError(e) };
+          failures += 1;
         }
 
+        const completed = completedItems + 1;
+        updateJob(jobId, {
+          completed,
+          failed: failures,
+          progress: items.length > 0 ? (completed / items.length) * 100 : 100,
+          outputPath,
+        });
+        completedItems = completed;
         setState((s) => ({
           ...s,
           completed: s.completed + 1,
@@ -87,8 +129,13 @@ export function useBatch<I, R>(): BatchHandle<I, R> {
       }
 
       setState((s) => ({ ...s, running: false, current: null }));
+      finishJob(
+        jobId,
+        cancelledRef.current ? "cancelled" : failures > 0 ? "failed" : "succeeded",
+        failures > 0 ? `${failures} item${failures === 1 ? "" : "s"} failed` : undefined,
+      );
     },
-    [],
+    [beginJob, finishJob, updateJob],
   );
 
   const cancel = useCallback(() => {
@@ -119,4 +166,8 @@ export function useBatch<I, R>(): BatchHandle<I, R> {
     succeededCount,
     failedCount,
   };
+}
+
+function newBatchJobId(): string {
+  return `batch-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }

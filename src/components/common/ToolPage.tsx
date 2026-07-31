@@ -7,33 +7,15 @@ interface ToolPageProps {
   title: string;
   description: string;
   icon: ReactNode;
-  /**
-   * Left-column content shown until something is uploaded. Usually a
-   * FileDropzone. Falls back to filling the whole 2-col row when there's
-   * no `preview` to swap in.
-   */
+  /** Left-column content shown until a file is selected. */
   upload?: ReactNode;
-  /**
-   * Left-column content shown after upload — usually an `ImagePreview` or
-   * `VideoPlayer`. When this is truthy it replaces `upload`, and a Clear
-   * button appears (top-right of the column) if `onClear` is set.
-   */
+  /** Left-column preview shown after a file is selected. */
   preview?: ReactNode;
-  /**
-   * Right-column controls + action button. Required for the 2-col layout
-   * to kick in; if omitted, ToolPage falls back to its legacy single-
-   * column behavior and just renders `children`.
-   */
+  /** Right-column controls and primary action. */
   controls?: ReactNode;
-  /**
-   * Wires the Clear button (shown only when `preview` is set). Should
-   * reset input paths and any tool-local state.
-   */
+  /** Clears the current input and tool-local state. */
   onClear?: () => void;
-  /**
-   * Full-width content rendered below the 2-col grid — progress bar,
-   * error panel, result panel, BeforeAfter splitter, batch result lists.
-   */
+  /** Progress, error, and result content shown below the workspace. */
   children: ReactNode;
 }
 
@@ -58,30 +40,28 @@ export function ToolPage({
   const navigate = useNavigate();
   const location = useLocation();
   const accent = accentFromPath(location.pathname);
+  const toolIndex = TOOLS.findIndex((tool) => tool.route === location.pathname);
+  const toolCategory = TOOLS[toolIndex]?.category;
 
-  // Editorial index — "TOOL 07 / 32 — IMAGE". Skipped for non-tool routes
-  // (Settings) that render through ToolPage.
-  const toolIdx = TOOLS.findIndex((t) => t.route === location.pathname);
-  const toolCategory = TOOLS[toolIdx]?.category;
-
-  // `icon` is accepted for backwards-compat but not rendered — the Swiss
-  // header uses an accent swatch for category, not per-tool glyphs.
+  // Kept for existing callers; the shared header uses the category accent.
   void icon;
 
   const hasGrid = Boolean(controls);
-  const leftIsPreview = Boolean(preview);
+  const inputReady = Boolean(preview);
+  const settingsStatus = inputReady ? "Ready to process" : "Choose a file to continue";
 
   return (
-    <div className="max-w-[1280px] mx-auto animate-fade-in-up">
+    <div className="tool-page animate-fade-in-up">
+      <div className="tool-page-header">
       <button
         type="button"
         onClick={() => navigate(-1)}
-        className="flex items-center gap-2 mb-6 transition-colors"
+        className="press-feedback mb-4 flex items-center gap-2"
         aria-label="Go back to the previous page"
         style={{
           fontSize: 12,
           fontWeight: 600,
-          letterSpacing: "0.06em",
+          letterSpacing: 0,
           textTransform: "uppercase",
           color: "var(--color-text-secondary)",
         }}
@@ -90,41 +70,31 @@ export function ToolPage({
         <span>Back</span>
       </button>
 
-      <header className="mb-8">
+      <header>
         <div className="flex items-start gap-5">
           <span
-            className="mt-2 shrink-0"
+            className="mt-1.5 shrink-0"
             style={{
-              width: 18,
-              height: 18,
+              width: 16,
+              height: 16,
               background: accent,
               display: "inline-block",
             }}
             aria-hidden
           />
           <div>
-            {toolIdx >= 0 && (
-              <div
-                className="mb-3"
-                style={{
-                  fontFamily: "var(--font-mono)",
-                  fontSize: 11,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  color: "var(--color-text-muted)",
-                }}
-              >
-                Tool {String(toolIdx + 1).padStart(2, "0")} / {TOOLS.length} —{" "}
-                {toolCategory}
+            {toolIndex >= 0 && (
+              <div className="mb-3 text-[11px] uppercase text-text-muted">
+                Tool {String(toolIndex + 1).padStart(2, "0")} / {TOOLS.length} / {toolCategory}
               </div>
             )}
             <h1
               className="swiss-display"
               style={{
                 fontWeight: 700,
-                fontSize: "clamp(2rem, 4vw, 3.5rem)",
-                letterSpacing: "-0.035em",
-                lineHeight: 0.95,
+                fontSize: 42,
+                letterSpacing: 0,
+                lineHeight: 1,
                 color: "var(--color-text)",
               }}
             >
@@ -132,11 +102,11 @@ export function ToolPage({
             </h1>
             <p
               style={{
-                fontSize: 15,
-                lineHeight: 1.55,
+                fontSize: 14,
+                lineHeight: 1.45,
                 color: "var(--color-text-secondary)",
                 maxWidth: "58ch",
-                marginTop: 14,
+                marginTop: 10,
               }}
             >
               {description}
@@ -144,38 +114,42 @@ export function ToolPage({
           </div>
         </div>
       </header>
+      </div>
 
+      <div className="tool-page-content">
       {hasGrid ? (
         <>
           <section
-            className="tool-workspace mb-7 border border-border bg-bg-secondary"
+            className="tool-workspace mb-6 border border-border bg-bg-secondary"
             style={{ borderTop: `4px solid ${accent}` }}
             aria-labelledby="tool-input-heading"
           >
             <div className="grid grid-cols-1 border-b border-border-subtle md:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
-              <div id="tool-input-heading" className="swiss-label px-6 py-3">
+              <div id="tool-input-heading" className="swiss-label px-5 py-2.5">
                 <span style={{ fontFamily: "var(--font-mono)", marginRight: 8 }}>01</span>
                 Input
               </div>
-              <div className="swiss-label border-t border-border-subtle px-6 py-3 md:border-l md:border-t-0">
-                <span style={{ fontFamily: "var(--font-mono)", marginRight: 8 }}>02</span>
-                Settings
+              <div className="flex items-center border-t border-border-subtle px-5 py-2.5 md:border-l md:border-t-0">
+                <span className="swiss-label">
+                  <span style={{ fontFamily: "var(--font-mono)", marginRight: 8 }}>02</span>
+                  Settings
+                </span>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
-              <div className="relative min-h-[320px] p-6">
-                {leftIsPreview && onClear && (
+              <div className="relative min-h-[280px] p-5">
+                {inputReady && onClear && (
                   <button
                     type="button"
                     onClick={onClear}
                     title="Clear (Esc)"
                     aria-label="Clear selected file"
-                    className="absolute top-8 right-8 z-10 flex items-center gap-1.5 border border-border bg-bg-secondary px-2.5 py-1.5 text-text-secondary transition-colors hover:border-text hover:text-text"
+                    className="press-feedback absolute right-7 top-7 z-10 flex items-center gap-1.5 border border-border bg-bg-secondary px-2.5 py-1.5 text-text-secondary hover:border-text hover:text-text"
                     style={{
                       fontSize: 11,
                       fontWeight: 600,
-                      letterSpacing: "0.06em",
+                      letterSpacing: 0,
                       textTransform: "uppercase",
                     }}
                   >
@@ -183,13 +157,29 @@ export function ToolPage({
                     Clear
                   </button>
                 )}
-                {leftIsPreview ? preview : upload}
+                {inputReady ? preview : upload}
               </div>
 
-              <div className="tool-controls border-t border-border-subtle p-6 md:border-l md:border-t-0">
-                <div className="space-y-4">
-                  {controls}
-                </div>
+              <div
+                className={`tool-controls border-t border-border-subtle p-5 md:border-l md:border-t-0 ${
+                  inputReady ? "" : "bg-bg-tertiary/25"
+                }`}
+              >
+                <p
+                  id="tool-settings-status"
+                  role="status"
+                  className="mb-4 border-b border-border-subtle pb-3 text-[12px] font-medium text-text-secondary"
+                >
+                  {settingsStatus}
+                </p>
+                <fieldset
+                  disabled={!inputReady}
+                  aria-describedby="tool-settings-status"
+                  className={`min-w-0 border-0 p-0 ${inputReady ? "" : "opacity-60"}`}
+                >
+                  <legend className="sr-only">Tool settings</legend>
+                  <div className="space-y-4">{controls}</div>
+                </fieldset>
               </div>
             </div>
           </section>
@@ -199,6 +189,7 @@ export function ToolPage({
       ) : (
         <div className="space-y-6">{children}</div>
       )}
+      </div>
     </div>
   );
 }
