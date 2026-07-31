@@ -25,6 +25,15 @@ export function ShellIntegrationPanel() {
   const pushToast = useAppStore((s) => s.pushToast);
 
   const refresh = useCallback(async () => {
+    if (!("__TAURI_INTERNALS__" in window)) {
+      setStatus({
+        installed: false,
+        manual_only: true,
+        needs_repair: false,
+        note: "Available in the desktop app.",
+      });
+      return;
+    }
     try {
       const s = await invoke<ShellIntegrationStatus>("shell_integration_status");
       setStatus(s);

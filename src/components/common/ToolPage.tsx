@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { ArrowLeft, X } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { TOOLS } from "../../lib/tools";
 
 interface ToolPageProps {
   title: string;
@@ -39,6 +40,8 @@ export function ToolPage({
   const navigate = useNavigate();
   const location = useLocation();
   const accent = accentFromPath(location.pathname);
+  const toolIndex = TOOLS.findIndex((tool) => tool.route === location.pathname);
+  const toolCategory = TOOLS[toolIndex]?.category;
 
   // Kept for existing callers; the shared header uses the category accent.
   void icon;
@@ -48,7 +51,8 @@ export function ToolPage({
   const settingsStatus = inputReady ? "Ready to process" : "Choose a file to continue";
 
   return (
-    <div className="max-w-[1280px] mx-auto animate-fade-in-up">
+    <div className="tool-page animate-fade-in-up">
+      <div className="tool-page-header">
       <button
         type="button"
         onClick={() => navigate(-1)}
@@ -66,8 +70,8 @@ export function ToolPage({
         <span>Back</span>
       </button>
 
-      <header className="mb-6">
-        <div className="flex items-start gap-4">
+      <header>
+        <div className="flex items-start gap-5">
           <span
             className="mt-1.5 shrink-0"
             style={{
@@ -79,6 +83,11 @@ export function ToolPage({
             aria-hidden
           />
           <div>
+            {toolIndex >= 0 && (
+              <div className="mb-3 text-[11px] uppercase text-text-muted">
+                Tool {String(toolIndex + 1).padStart(2, "0")} / {TOOLS.length} / {toolCategory}
+              </div>
+            )}
             <h1
               className="swiss-display"
               style={{
@@ -105,7 +114,9 @@ export function ToolPage({
           </div>
         </div>
       </header>
+      </div>
 
+      <div className="tool-page-content">
       {hasGrid ? (
         <>
           <section
@@ -178,6 +189,7 @@ export function ToolPage({
       ) : (
         <div className="space-y-6">{children}</div>
       )}
+      </div>
     </div>
   );
 }

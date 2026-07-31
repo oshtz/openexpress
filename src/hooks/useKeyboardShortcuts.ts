@@ -13,12 +13,18 @@ export function useKeyboardShortcuts() {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      const mod = isMac ? e.metaKey : e.ctrlKey;
-      if (!mod) return;
-
       // Don't hijack typing inside inputs / textareas / contenteditables.
       const target = e.target as HTMLElement | null;
       if (target?.matches?.("input, textarea, [contenteditable=true]")) return;
+
+      if (e.key === "F1" || e.key === "F2" || e.key === "F3") {
+        e.preventDefault();
+        navigate(e.key === "F1" ? "/" : e.key === "F2" ? "/settings" : "/?view=queue");
+        return;
+      }
+
+      const mod = isMac ? e.metaKey : e.ctrlKey;
+      if (!mod) return;
 
       switch (e.key.toLowerCase()) {
         case ",":

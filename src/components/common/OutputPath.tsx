@@ -13,6 +13,7 @@ interface OutputPathProps {
 export function OutputPath({ value, onChange, label = "Output" }: OutputPathProps) {
   const id = useId();
   const browse = async () => {
+    if (!("__TAURI_INTERNALS__" in window)) return;
     const dir = await open({ directory: true });
     if (dir) onChange(dir as string);
   };

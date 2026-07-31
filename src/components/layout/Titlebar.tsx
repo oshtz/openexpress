@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getCurrentWindow, type Window } from "@tauri-apps/api/window";
-import { Minus, Square, X, Copy } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { Close, Copy, Minus, Square } from "pixelarticons/react";
 
 function createBrowserWindowStub(): Pick<
   Window,
@@ -22,9 +23,18 @@ function getSafeCurrentWindow() {
   return getCurrentWindow();
 }
 
+const tabs = [
+  { label: "Open", view: "open" },
+  { label: "Recent", view: "recent" },
+  { label: "Queue", view: "queue" },
+] as const;
+
 export function Titlebar() {
   const [maximized, setMaximized] = useState(false);
   const appWindow = useMemo(() => getSafeCurrentWindow(), []);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const activeView = new URLSearchParams(location.search).get("view") || "open";
 
   useEffect(() => {
     const unlisten = appWindow.onResized(async () => {
@@ -35,44 +45,59 @@ export function Titlebar() {
     };
   }, [appWindow]);
 
+  const openView = (view: (typeof tabs)[number]["view"]) => {
+    navigate(view === "open" ? "/" : `/?view=${view}`);
+  };
+
   return (
-    <div
+    <header
       data-tauri-drag-region
       onDoubleClick={() => appWindow.toggleMaximize()}
-      className="h-9 flex items-center shrink-0 bg-bg border-b border-border select-none"
+      className="app-titlebar"
     >
-      <div data-tauri-drag-region className="flex-1 min-w-0" />
+      <button
+        type="button"
+        className="brand-button"
+        onClick={() => openView("open")}
+        aria-label="OpenExpress home"
+      >
+        <img src="/openexpress-logo-pixel.svg" alt="OpenExpress" />
+      </button>
 
-      <div className="flex items-center h-full border-l border-border">
-        <button
-          type="button"
-          aria-label="Minimize window"
-          onClick={() => appWindow.minimize()}
-          className="inline-flex items-center justify-center w-11 h-full text-text-muted hover:bg-text hover:text-bg"
-        >
-          <Minus size={12} strokeWidth={1.5} />
+      <nav className="titlebar-tabs" aria-label="Workspace">
+        {tabs.map((tab) => (
+          <button
+            key={tab.view}
+            type="button"
+            className={location.pathname === "/" && activeView === tab.view ? "active" : ""}
+            onClick={() => openView(tab.view)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </nav>
+
+      <div data-tauri-drag-region className="titlebar-spacer" />
+
+      <div className="local-status">
+        Local / Offline
+      </div>
+
+      <div className="window-controls">
+        <button type="button" aria-label="Minimize window" onClick={() => appWindow.minimize()}>
+          <Minus width={16} height={16} />
         </button>
         <button
           type="button"
           aria-label={maximized ? "Restore window" : "Maximize window"}
           onClick={() => appWindow.toggleMaximize()}
-          className="inline-flex items-center justify-center w-11 h-full text-text-muted hover:bg-text hover:text-bg"
         >
-          {maximized ? (
-            <Copy size={10} strokeWidth={1.5} className="scale-x-[-1]" />
-          ) : (
-            <Square size={10} strokeWidth={1.5} />
-          )}
+          {maximized ? <Copy width={14} height={14} /> : <Square width={14} height={14} />}
         </button>
-        <button
-          type="button"
-          aria-label="Close window"
-          onClick={() => appWindow.close()}
-          className="inline-flex items-center justify-center w-11 h-full text-text-muted hover:bg-danger hover:text-bg"
-        >
-          <X size={12} strokeWidth={1.5} />
+        <button type="button" aria-label="Close window" onClick={() => appWindow.close()}>
+          <Close width={16} height={16} />
         </button>
       </div>
-    </div>
+    </header>
   );
 }

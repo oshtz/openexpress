@@ -64,12 +64,22 @@ test("31 tool routes are covered", () => {
   expect(TOOL_ROUTES).toHaveLength(31);
 });
 
-test("home starts from a file and keeps the full tool catalog available", async ({ page }) => {
+test("home opens files and switches between the four tool categories", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: /edit media/i })).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Drop a file to see compatible tools" }),
-  ).toBeVisible();
-  await expect(page.getByText("All tools")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Image" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Drop file or press Ctrl+O" })).toBeVisible();
+
+  const categories = [
+    { name: "Image tools", action: /^resize\b/i },
+    { name: "Video tools", action: /^trim\b/i },
+    { name: "PDF tools", action: /^merge\b/i },
+    { name: "Audio tools", action: /^trim\b/i },
+  ];
+
+  for (const category of categories) {
+    const selector = page.getByRole("radio", { name: category.name });
+    await selector.click();
+    await expect(selector).toBeChecked();
+    await expect(page.getByRole("button", { name: category.action }).first()).toBeVisible();
+  }
 });

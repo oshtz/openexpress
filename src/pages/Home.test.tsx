@@ -42,7 +42,7 @@ describe("Home", () => {
     renderHome();
 
     await user.click(
-      screen.getByRole("button", { name: "Drop a file to see compatible tools" }),
+      screen.getByRole("button", { name: "Drop file or press Ctrl+O" }),
     );
 
     expect(screen.getByTestId("location")).toHaveTextContent(

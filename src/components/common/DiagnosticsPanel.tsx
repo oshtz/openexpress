@@ -29,18 +29,33 @@ function formatDiagnostics(d: Diagnostics): string {
 }
 
 export function DiagnosticsPanel() {
-  const [diagnostics, setDiagnostics] = useState<Diagnostics | null>(null);
+  const isTauri = "__TAURI_INTERNALS__" in window;
+  const [diagnostics, setDiagnostics] = useState<Diagnostics | null>(() =>
+    isTauri
+      ? null
+      : {
+          app_version: "web preview",
+          os: navigator.platform || "browser",
+          arch: "browser",
+          ffmpeg_available: false,
+          ffmpeg_version: null,
+          app_data_dir: null,
+          log_dir: null,
+          features: { bg_removal: false },
+        },
+  );
   const [copied, setCopied] = useState(false);
   const pushToast = useAppStore((s) => s.pushToast);
 
   useEffect(() => {
+    if (!isTauri) return;
     invoke<Diagnostics>("get_diagnostics")
       .then(setDiagnostics)
       .catch(() => {
         // Surface as a toast; the rest of Settings stays usable.
         pushToast("error", "Failed to load diagnostics");
       });
-  }, [pushToast]);
+  }, [isTauri, pushToast]);
 
   const handleCopy = useCallback(async () => {
     if (!diagnostics) return;

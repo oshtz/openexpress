@@ -35,11 +35,13 @@ export interface Toast {
 }
 
 interface AppState {
+  accentColor: string;
   theme: "light" | "dark" | "system";
   recentFiles: RecentFile[];
   jobs: AppJob[];
   outputDir: string;
   toasts: Toast[];
+  setAccentColor: (color: string) => void;
   setTheme: (theme: "light" | "dark" | "system") => void;
   addRecentFile: (file: RecentFile) => void;
   removeRecentFile: (path: string) => void;
@@ -81,11 +83,18 @@ function readRecentFiles(): RecentFile[] {
 }
 
 export const useAppStore = create<AppState>((set) => ({
+  accentColor: localStorage.getItem("accentColor") || "#1597ff",
   theme: readTheme(),
   recentFiles: readRecentFiles(),
   jobs: [],
   outputDir: localStorage.getItem("outputDir") || "",
   toasts: [],
+
+  setAccentColor: (accentColor) => {
+    localStorage.setItem("accentColor", accentColor);
+    document.documentElement.style.setProperty("--color-accent", accentColor);
+    set({ accentColor });
+  },
 
   setTheme: (theme) => {
     localStorage.setItem("theme", theme);
@@ -166,3 +175,8 @@ window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () 
     applyTheme("system");
   }
 });
+
+document.documentElement.style.setProperty(
+  "--color-accent",
+  useAppStore.getState().accentColor,
+);

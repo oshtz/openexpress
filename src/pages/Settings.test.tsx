@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { Settings } from "./Settings";
@@ -43,5 +43,20 @@ describe("Settings", () => {
     ).toBeInTheDocument();
     await waitFor(() => expect(screen.getByText("Shell integration")).toBeInTheDocument());
     expect(container.textContent).not.toMatch(/[\u0590-\u05ff]|\u20ac|\u009d/);
+  });
+
+  it("persists the selected accent color", () => {
+    render(
+      <MemoryRouter>
+        <Settings />
+      </MemoryRouter>,
+    );
+
+    fireEvent.change(screen.getByLabelText("Accent color"), {
+      target: { value: "#ff4f91" },
+    });
+
+    expect(localStorage.getItem("accentColor")).toBe("#ff4f91");
+    expect(document.documentElement.style.getPropertyValue("--color-accent")).toBe("#ff4f91");
   });
 });

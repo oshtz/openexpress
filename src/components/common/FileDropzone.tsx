@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
-import { FileText, X } from "lucide-react";
+import { X } from "lucide-react";
+import { FileText } from "pixelarticons/react";
 import { pasteImageAsFile } from "../../lib/clipboard";
 import { allowAssetPaths } from "../../lib/assets";
 import { getFileName } from "../../lib/utils";
@@ -16,6 +17,7 @@ interface FileDropzoneProps {
   onFiles: (paths: string[]) => void;
   label?: string;
   compact?: boolean;
+  variant?: "default" | "workbench";
 }
 
 function extensionOf(path: string): string {
@@ -30,6 +32,7 @@ export function FileDropzone({
   onFiles,
   label = "Drop files here or click to browse",
   compact = false,
+  variant = "default",
 }: FileDropzoneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const acceptRef = useRef(accept);
@@ -147,6 +150,33 @@ export function FileDropzone({
     return () => window.removeEventListener("paste", handler);
   }, [acceptsImages, deliverPaths]);
 
+  if (variant === "workbench") {
+    return (
+      <div
+        ref={containerRef}
+        onClick={handleClick}
+        role="button"
+        aria-label={
+          hasFile
+            ? `Selected file: ${selectedPaths[0] ?? label}. Activate to choose a different file.`
+            : label
+        }
+        tabIndex={0}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            void handleClick();
+          }
+        }}
+        className={`workbench-dropzone${isDragging ? " dragging" : ""}`}
+      >
+        <FileText width={80} height={80} aria-hidden />
+        <strong>{hasFile ? label : "Drop file or press Ctrl+O"}</strong>
+        <span>{hasFile ? "Click to choose another file" : "Files never leave this device"}</span>
+      </div>
+    );
+  }
+
   const borderColor = isDragging
     ? "var(--color-accent-gold)"
     : hasFile
@@ -217,7 +247,7 @@ export function FileDropzone({
         <div className="relative flex flex-col items-center text-center">
           {hasFile ? (
             <>
-              <FileText size={24} strokeWidth={1.25} style={{ color: "var(--color-text)" }} />
+              <FileText width={24} height={24} style={{ color: "var(--color-text)" }} />
               <p
                 className="mt-3"
                 style={{
@@ -295,7 +325,7 @@ export function FileDropzone({
                 key={path}
                 className="flex h-9 items-center gap-2 border-b border-border-subtle px-3 last:border-b-0"
               >
-                <FileText size={13} className="shrink-0 text-text-muted" />
+                <FileText width={13} height={13} className="shrink-0 text-text-muted" />
                 <span className="min-w-0 flex-1 truncate text-[11px] text-text" title={path}>
                   {getFileName(path)}
                 </span>
