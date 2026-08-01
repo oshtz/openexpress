@@ -1,0 +1,146 @@
+name: Release smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Published release tag to verify
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-smoke-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  windows:
+    name: Windows packaged app
+    runs-on: windows-2025-vs2026
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ inputs.tag }}
+    steps:
+      - name: Download published assets
+        shell: pwsh
+        run: |
+          gh release download $env:RELEASE_TAG `
+            --repo $env:GITHUB_REPOSITORY `
+            --pattern OpenExpress-Portable.exe `
+            --pattern latest.json `
+            --pattern SHA256SUMS.txt `
+            --dir release-smoke
+
+      - name: Verify checksums and updater metadata
+        shell: pwsh
+        run: |
+          $assets = @("OpenExpress-Portable.exe", "latest.json")
+          $sums = Get-Content -LiteralPath "release-smoke\SHA256SUMS.txt"
+          foreach ($asset in $assets) {
+            $line = $sums | Where-Object { $_ -match "\s$([regex]::Escape($asset))$" }
+            if (-not $line) { throw "SHA256SUMS.txt does not cover $asset" }
+            $expected = ($line -split "\s+")[0]
+            $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath "release-smoke\$asset").Hash.ToLowerInvariant()
+            if ($actual -ne $expected) { throw "Checksum mismatch for $asset" }
+          }
+
+          $manifest = Get-Content -Raw -LiteralPath "release-smoke\latest.json" | ConvertFrom-Json
+          $expectedVersion = $env:RELEASE_TAG.TrimStart("v")
+          if ($manifest.version -ne $expectedVersion) { throw "Updater version does not match $env:RELEASE_TAG" }
+          if (-not $manifest.platforms."windows-x86_64") { throw "Updater manifest is missing windows-x86_64" }
+
+      - name: Launch packaged app
+        shell: pwsh
+        run: |
+          $app = Resolve-Path "release-smoke\OpenExpress-Portable.exe"
+          $expectedVersion = $env:RELEASE_TAG.TrimStart("v")
+          $productVersion = (Get-Item -LiteralPath $app).VersionInfo.ProductVersion
+          if (-not $productVersion.StartsWith($expectedVersion)) {
+            throw "Executable version $productVersion does not match $expectedVersion"
+          }
+
+          $signature = Get-AuthenticodeSignature -LiteralPath $app
+          if ($signature.Status -notin @("Valid", "NotSigned")) {
+            throw "Unexpected Authenticode status: $($signature.Status)"
+          }
+          Write-Host "Authenticode: $($signature.Status)"
+
+          $process = Start-Process -FilePath $app -PassThru -WindowStyle Hidden
+          try {
+            Start-Sleep -Seconds 10
+            $process.Refresh()
+            if ($process.HasExited) { throw "OpenExpress exited with code $($process.ExitCode)" }
+            if (-not $process.Responding) { throw "OpenExpress stopped responding during startup" }
+          }
+          finally {
+            $process.Refresh()
+            if (-not $process.HasExited) {
+              Stop-Process -Id $process.Id -Force
+              Wait-Process -Id $process.Id -ErrorAction SilentlyContinue
+            }
+          }
+
+  macos:
+    name: macOS packaged app
+    runs-on: macos-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ inputs.tag }}
+    steps:
+      - name: Download published assets
+        run: |
+          gh release download "$RELEASE_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern OpenExpress.app.zip \
+            --pattern OpenExpress.dmg \
+            --pattern latest.json \
+            --pattern SHA256SUMS.txt \
+            --dir release-smoke
+
+      - name: Verify checksums and updater metadata
+        run: |
+          cd release-smoke
+          grep -E ' (OpenExpress\.app\.zip|OpenExpress\.dmg|latest\.json)$' SHA256SUMS.txt > selected-sums.txt
+          test "$(wc -l < selected-sums.txt | tr -d ' ')" = 3
+          shasum -a 256 --check selected-sums.txt
+
+          expected_version="${RELEASE_TAG#v}"
+          test "$(jq -r '.version' latest.json)" = "$expected_version"
+          jq -e '.platforms | to_entries[] | select(.key | startswith("darwin-"))' latest.json >/dev/null
+
+      - name: Verify and launch packaged app
+        run: |
+          mkdir extracted
+          ditto -x -k release-smoke/OpenExpress.app.zip extracted
+          app="$RUNNER_TEMP/OpenExpress.app"
+          ditto extracted/OpenExpress.app "$app"
+
+          codesign --verify --deep --strict --verbose=2 "$app"
+          xcrun stapler validate "$app"
+          spctl -a -vvv -t exec "$app"
+
+          expected_version="${RELEASE_TAG#v}"
+          actual_version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app/Contents/Info.plist")
+          test "$actual_version" = "$expected_version"
+          executable=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app/Contents/Info.plist")
+
+          "$app/Contents/MacOS/$executable" >"$RUNNER_TEMP/openexpress.log" 2>&1 &
+          pid=$!
+          sleep 10
+          if ! kill -0 "$pid" 2>/dev/null; then
+            cat "$RUNNER_TEMP/openexpress.log"
+            exit 1
+          fi
+          kill "$pid"
+          wait "$pid" || true
+
+      - name: Verify DMG contents
+        run: |
+          mountpoint=$(mktemp -d)
+          hdiutil attach release-smoke/OpenExpress.dmg -nobrowse -readonly -mountpoint "$mountpoint"
+          trap 'hdiutil detach "$mountpoint"' EXIT
+          test -d "$mountpoint/OpenExpress.app"
+          test -L "$mountpoint/Applications"
+          codesign --verify --deep --strict --verbose=2 "$mountpoint/OpenExpress.app"
