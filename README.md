@@ -103,7 +103,7 @@ npm run tauri build
 
 Local bundles are written under `src-tauri/target/release/bundle/`. Tagged releases create a draft containing the Windows portable executable, macOS DMG, macOS updater archive, updater manifest, and checksums.
 
-Windows signing is optional: when both signing credentials are configured, the workflow signs the executable and includes it in self-update metadata. Without them, it publishes an unsigned manual download and excludes that executable from self-update. Partial signing configuration fails the release. macOS signing and notarization remain required.
+Windows signing is optional: when both signing credentials are configured, the workflow signs the executable. Signed and unsigned Windows builds are included in self-update metadata and verified with SHA-256 before replacement. Partial signing configuration fails the release. macOS signing and notarization remain required.
 
 ## Verification
 

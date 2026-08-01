@@ -376,9 +376,6 @@ async fn download_available_update(
         )));
     }
 
-    #[cfg(target_os = "windows")]
-    verify_windows_update_signature(&tmp_path)?;
-
     fs::rename(&tmp_path, &download_path)
         .map_err(|e| AppError::from_io(e, download_path.to_string_lossy()))?;
     let _ = progress.send(progress_event(downloaded, expected_total));
@@ -624,46 +621,6 @@ fn macos_bundle_value(app_path: &Path, key: &str) -> AppResult<Option<String>> {
         .and_then(|dict| dict.get(key))
         .and_then(plist::Value::as_string)
         .map(ToOwned::to_owned))
-}
-
-#[cfg(target_os = "windows")]
-fn verify_windows_update_signature(update_path: &Path) -> AppResult<()> {
-    let current_exe = std::env::current_exe()
-        .map_err(|e| AppError::Internal(format!("locating current executable: {e}")))?;
-    let script = format!(
-        r#"$ErrorActionPreference = 'Stop'
-$current = Get-AuthenticodeSignature -LiteralPath '{current}'
-$candidate = Get-AuthenticodeSignature -LiteralPath '{candidate}'
-if ($current.Status -ne 'Valid' -or $null -eq $current.SignerCertificate) {{
-  throw 'The installed OpenExpress executable does not have a valid Authenticode signature.'
-}}
-if ($candidate.Status -ne 'Valid' -or $null -eq $candidate.SignerCertificate) {{
-  throw 'The downloaded OpenExpress update does not have a valid Authenticode signature.'
-}}
-if ($current.SignerCertificate.Subject -ne $candidate.SignerCertificate.Subject) {{
-  throw 'The downloaded OpenExpress update was signed by a different publisher.'
-}}"#,
-        current = escape_powershell_literal(&current_exe.to_string_lossy()),
-        candidate = escape_powershell_literal(&update_path.to_string_lossy()),
-    );
-
-    let output = std::process::Command::new("powershell")
-        .args([
-            "-NoProfile",
-            "-NonInteractive",
-            "-ExecutionPolicy",
-            "Bypass",
-            "-Command",
-            &script,
-        ])
-        .output()
-        .map_err(|e| AppError::Internal(format!("checking update signature: {e}")))?;
-    if !output.status.success() {
-        return Err(AppError::PermissionDenied(
-            "OpenExpress could not verify the update publisher.".into(),
-        ));
-    }
-    Ok(())
 }
 
 #[cfg(target_os = "macos")]
