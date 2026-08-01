@@ -24,7 +24,7 @@ OpenExpress turns common media operations into focused desktop tools. Drop a fil
 Download the current build from [GitHub Releases](https://github.com/oshtz/openexpress/releases/latest):
 
 - **Windows:** portable `OpenExpress-Portable.exe`. The release notes state whether it is Authenticode signed.
-- **macOS:** signed and notarized app, distributed as `OpenExpress.dmg` and `OpenExpress.app.zip` for self-update.
+- **macOS (Apple silicon):** signed and notarized app, distributed as `OpenExpress.dmg` and `OpenExpress.app.zip` for self-update.
 - **Integrity:** verify downloads with the release's `SHA256SUMS.txt`.
 
 Windows and macOS are the release targets. Linux remains available as a development build target.
@@ -95,6 +95,12 @@ npm run tauri dev
 
 Vite runs at `http://localhost:5173` and the Tauri shell reloads as the frontend and Rust backend change.
 
+## Development Flow
+
+- Open feature and dependency pull requests against `dev`.
+- Promote `dev` to `main` by pull request after the CI gate passes.
+- Create release tags from `main` only.
+
 ## Build And Release
 
 ```sh
@@ -125,6 +131,9 @@ cargo test
 cargo audit
 cargo +1.88.0 check --locked
 ```
+
+Published desktop artifacts can be checked on native GitHub runners with
+`gh workflow run release-smoke.yml -f tag=v0.1.5`.
 
 ## Project Layout
 

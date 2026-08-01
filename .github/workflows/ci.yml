@@ -2,11 +2,21 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   pull_request:
-    branches: [main]
+    branches: [main, dev]
 
 jobs:
+  branch-flow:
+    name: Branch flow
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require dev promotion into main
+        if: github.event_name == 'pull_request' && github.base_ref == 'main' && github.head_ref != 'dev'
+        run: |
+          echo "Pull requests into main must promote dev."
+          exit 1
+
   frontend:
     name: Frontend (TS + lint)
     runs-on: ubuntu-latest
@@ -119,3 +129,21 @@ jobs:
       - name: Audit locked dependencies
         working-directory: src-tauri
         run: cargo audit
+
+  gate:
+    name: CI gate
+    if: always()
+    needs: [branch-flow, frontend, backend, backend-msrv, rust-security]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every CI job
+        env:
+          BRANCH_FLOW: ${{ needs.branch-flow.result }}
+          FRONTEND: ${{ needs.frontend.result }}
+          BACKEND: ${{ needs.backend.result }}
+          BACKEND_MSRV: ${{ needs.backend-msrv.result }}
+          RUST_SECURITY: ${{ needs.rust-security.result }}
+        run: |
+          for result in "$BRANCH_FLOW" "$FRONTEND" "$BACKEND" "$BACKEND_MSRV" "$RUST_SECURITY"; do
+            test "$result" = success
+          done
