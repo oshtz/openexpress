@@ -46,27 +46,4 @@ describe("generate-update-manifest", () => {
       rmSync(dir, { force: true, recursive: true });
     }
   });
-
-  it("omits unsigned Windows builds from updater metadata", () => {
-    const dir = mkdtempSync(join(tmpdir(), "openexpress-update-manifest-test-"));
-    try {
-      writeFileSync(join(dir, "OpenExpress.app.zip"), "macos");
-
-      execFileSync(process.execPath, ["scripts/generate-update-manifest.mjs"], {
-        cwd: process.cwd(),
-        env: {
-          ...process.env,
-          UPDATE_ASSET_DIR: dir,
-          UPDATE_TAG: "v9.9.9",
-          INCLUDE_WINDOWS_UPDATE: "false",
-        },
-      });
-
-      const manifest = JSON.parse(readFileSync(join(dir, "latest.json"), "utf8"));
-      expect(manifest.platforms).not.toHaveProperty("windows-x86_64");
-      expect(manifest.platforms).toHaveProperty("darwin-aarch64");
-    } finally {
-      rmSync(dir, { force: true, recursive: true });
-    }
-  });
 });

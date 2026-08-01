@@ -312,9 +312,8 @@ jobs:
         env:
           UPDATE_TAG: ${{ steps.release.outputs.tag }}
           UPDATE_VERSION: ${{ steps.release.outputs.version }}
-          UPDATE_NOTES: "Desktop workbench redesign, safer local workflows, and native shell integration."
+          UPDATE_NOTES: "Windows users on v0.1.4 or older must install v0.1.5 manually once; subsequent updates are SHA-256 verified."
           MACOS_UPDATE_PLATFORM: ${{ steps.macos.outputs.platform }}
-          INCLUDE_WINDOWS_UPDATE: ${{ needs.build-windows.outputs.signed }}
         run: node scripts/generate-update-manifest.mjs
 
       - name: Generate and verify checksums
@@ -333,15 +332,15 @@ jobs:
           tag_name: ${{ steps.release.outputs.tag }}
           name: OpenExpress ${{ steps.release.outputs.tag }}
           body: |
-            Desktop workbench redesign, safer local workflows, and native shell integration.
+            Windows users on v0.1.4 or older must install v0.1.5 manually once; subsequent updates are SHA-256 verified.
 
             Release assets:
             - Windows: OpenExpress-Portable.exe (${{ needs.build-windows.outputs.signed == 'true' && 'Authenticode signed' || 'unsigned; verify SHA256SUMS.txt before running' }})
             - macOS updater: OpenExpress.app.zip
             - macOS manual install: OpenExpress.dmg
 
-            Unsigned Windows builds are excluded from latest.json and require a manual update.
-            Verify downloads with SHA256SUMS.txt.
+            Windows updates are SHA-256 verified before install; Authenticode signing is optional.
+            Verify manual downloads with SHA256SUMS.txt.
           draft: true
           prerelease: false
           files: |
