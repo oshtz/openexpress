@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 
 export interface RecentFile {
   path: string;
@@ -36,12 +37,14 @@ export interface Toast {
 
 interface AppState {
   accentColor: string;
+  uiScale: number;
   theme: "light" | "dark" | "system";
   recentFiles: RecentFile[];
   jobs: AppJob[];
   outputDir: string;
   toasts: Toast[];
   setAccentColor: (color: string) => void;
+  setUiScale: (scale: number) => void;
   setTheme: (theme: "light" | "dark" | "system") => void;
   addRecentFile: (file: RecentFile) => void;
   removeRecentFile: (path: string) => void;
@@ -59,6 +62,18 @@ let toastCounter = 0;
 function readTheme(): AppState["theme"] {
   const value = localStorage.getItem("theme");
   return value === "light" || value === "dark" || value === "system" ? value : "system";
+}
+
+function readUiScale(): number {
+  const value = Number(localStorage.getItem("uiScale"));
+  return Number.isFinite(value) && value >= 80 && value <= 140 ? value : 100;
+}
+
+function applyUiScale(scale: number) {
+  if (!("__TAURI_INTERNALS__" in window)) return;
+  void getCurrentWebview().setZoom(scale / 100).catch((error) => {
+    console.error("Failed to apply UI scale", error);
+  });
 }
 
 function readRecentFiles(): RecentFile[] {
@@ -84,6 +99,7 @@ function readRecentFiles(): RecentFile[] {
 
 export const useAppStore = create<AppState>((set) => ({
   accentColor: localStorage.getItem("accentColor") || "#1597ff",
+  uiScale: readUiScale(),
   theme: readTheme(),
   recentFiles: readRecentFiles(),
   jobs: [],
@@ -94,6 +110,12 @@ export const useAppStore = create<AppState>((set) => ({
     localStorage.setItem("accentColor", accentColor);
     document.documentElement.style.setProperty("--color-accent", accentColor);
     set({ accentColor });
+  },
+
+  setUiScale: (uiScale) => {
+    localStorage.setItem("uiScale", String(uiScale));
+    set({ uiScale });
+    applyUiScale(uiScale);
   },
 
   setTheme: (theme) => {
@@ -180,3 +202,4 @@ document.documentElement.style.setProperty(
   "--color-accent",
   useAppStore.getState().accentColor,
 );
+applyUiScale(useAppStore.getState().uiScale);

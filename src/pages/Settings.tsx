@@ -7,7 +7,7 @@ import { ShellIntegrationPanel } from "../components/common/ShellIntegrationPane
 import { UpdatePanel } from "../components/common/UpdatePanel";
 
 export function Settings() {
-  const { accentColor, setAccentColor, outputDir, setOutputDir } = useAppStore();
+  const { accentColor, setAccentColor, uiScale, setUiScale, outputDir, setOutputDir } = useAppStore();
 
   const accents = ["#1597ff", "#b7ff35", "#ffb21a", "#ff4f91", "#a78bfa"];
 
@@ -42,6 +42,22 @@ export function Settings() {
             ))}
           </div>
           <output>{accentColor.toUpperCase()}</output>
+        </div>
+        <div className="ui-scale-setting">
+          <label htmlFor="ui-scale">UI scale</label>
+          <input
+            id="ui-scale"
+            type="range"
+            min="80"
+            max="140"
+            step="10"
+            value={uiScale}
+            onChange={(event) => setUiScale(Number(event.target.value))}
+          />
+          <output htmlFor="ui-scale">{uiScale}%</output>
+          <button type="button" disabled={uiScale === 100} onClick={() => setUiScale(100)}>
+            Reset
+          </button>
         </div>
       </div>
 

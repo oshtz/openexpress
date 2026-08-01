@@ -907,6 +907,41 @@ kbd {
   font-size: 11px;
 }
 
+.ui-scale-setting {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(160px, 320px) 48px auto;
+  align-items: center;
+  gap: 24px;
+  margin-top: 20px;
+  border-top: 1px solid var(--color-border-subtle);
+  padding-top: 20px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.ui-scale-setting output {
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
+.ui-scale-setting button {
+  border: 0;
+  border-bottom: 1px solid var(--color-accent);
+  background: transparent;
+  color: var(--color-accent);
+  padding: 4px 0;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.ui-scale-setting button:disabled {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
 @media (max-width: 1280px) {
   .app-titlebar {
     grid-template-columns: 220px auto minmax(20px, 1fr) auto auto;
