@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
+import { mockSetZoom } from "../test/setup";
 import { Settings } from "./Settings";
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -60,5 +61,21 @@ describe("Settings", () => {
 
     expect(localStorage.getItem("accentColor")).toBe("#ff4f91");
     expect(document.documentElement.style.getPropertyValue("--color-accent")).toBe("#ff4f91");
+  });
+
+  it("persists and applies the selected UI scale", async () => {
+    render(
+      <MemoryRouter>
+        <Settings />
+      </MemoryRouter>,
+    );
+
+    fireEvent.change(screen.getByLabelText("UI scale"), { target: { value: "120" } });
+
+    expect(localStorage.getItem("uiScale")).toBe("120");
+    await waitFor(() => expect(mockSetZoom).toHaveBeenCalledWith(1.2));
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset" }));
+    expect(localStorage.getItem("uiScale")).toBe("100");
   });
 });

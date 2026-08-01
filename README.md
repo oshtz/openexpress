@@ -133,7 +133,7 @@ cargo +1.88.0 check --locked
 ```
 
 Published desktop artifacts can be checked on native GitHub runners with
-`gh workflow run release-smoke.yml -f tag=v0.1.5`.
+`gh workflow run release-smoke.yml -f tag=v0.1.6`.
 
 ## Project Layout
 

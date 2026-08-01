@@ -4,6 +4,7 @@ import { cleanup } from "@testing-library/react";
 
 export const mockDialogOpen = vi.fn();
 export const mockDragDropCallbacks: Array<(event: { payload: unknown }) => void> = [];
+export const mockSetZoom = vi.fn(async () => {});
 
 Object.defineProperty(window, "__TAURI_INTERNALS__", {
   configurable: true,
@@ -34,6 +35,7 @@ vi.mock("@tauri-apps/plugin-dialog", () => ({
 
 vi.mock("@tauri-apps/api/webview", () => ({
   getCurrentWebview: () => ({
+    setZoom: mockSetZoom,
     onDragDropEvent: vi.fn(async (callback: (event: { payload: unknown }) => void) => {
       mockDragDropCallbacks.push(callback);
       return vi.fn();
@@ -44,5 +46,6 @@ vi.mock("@tauri-apps/api/webview", () => ({
 afterEach(() => {
   cleanup();
   mockDialogOpen.mockReset();
+  mockSetZoom.mockClear();
   mockDragDropCallbacks.length = 0;
 });
