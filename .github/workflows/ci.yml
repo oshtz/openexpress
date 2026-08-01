@@ -1,8 +1,6 @@
 name: CI
 
 on:
-  push:
-    branches: [main, dev]
   pull_request:
     branches: [main, dev]
 
@@ -19,6 +17,7 @@ jobs:
 
   frontend:
     name: Frontend (TS + lint)
+    if: github.base_ref == 'dev'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -57,6 +56,7 @@ jobs:
 
   backend:
     name: Backend (cargo fmt + clippy + test)
+    if: github.base_ref == 'dev'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -95,6 +95,7 @@ jobs:
 
   backend-msrv:
     name: Backend (Rust 1.88 MSRV)
+    if: github.base_ref == 'dev'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -116,6 +117,7 @@ jobs:
 
   rust-security:
     name: Rust security audit
+    if: github.base_ref == 'dev'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -138,12 +140,20 @@ jobs:
     steps:
       - name: Require every CI job
         env:
+          BASE_REF: ${{ github.base_ref }}
           BRANCH_FLOW: ${{ needs.branch-flow.result }}
           FRONTEND: ${{ needs.frontend.result }}
           BACKEND: ${{ needs.backend.result }}
           BACKEND_MSRV: ${{ needs.backend-msrv.result }}
           RUST_SECURITY: ${{ needs.rust-security.result }}
         run: |
-          for result in "$BRANCH_FLOW" "$FRONTEND" "$BACKEND" "$BACKEND_MSRV" "$RUST_SECURITY"; do
-            test "$result" = success
-          done
+          test "$BRANCH_FLOW" = success
+          if [ "$BASE_REF" = main ]; then
+            for result in "$FRONTEND" "$BACKEND" "$BACKEND_MSRV" "$RUST_SECURITY"; do
+              test "$result" = skipped
+            done
+          else
+            for result in "$FRONTEND" "$BACKEND" "$BACKEND_MSRV" "$RUST_SECURITY"; do
+              test "$result" = success
+            done
+          fi
