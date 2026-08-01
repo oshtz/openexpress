@@ -907,7 +907,7 @@ kbd {
   font-size: 11px;
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 1280px) {
   .app-titlebar {
     grid-template-columns: 220px auto minmax(20px, 1fr) auto auto;
   }
@@ -952,7 +952,7 @@ kbd {
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 960px) {
   .app-titlebar {
     grid-template-columns: 160px auto minmax(0, 1fr) auto;
   }
