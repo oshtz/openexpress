@@ -58,7 +58,7 @@ fn apply_adjustments(
     let sat_factor = (saturation + 100.0) / 100.0;
 
     let mut rgba = img.to_rgba8();
-    for px in rgba.chunks_exact_mut(4) {
+    for px in rgba.as_chunks_mut::<4>().0 {
         let mut rf = px[0] as f32 + bright_offset;
         let mut gf = px[1] as f32 + bright_offset;
         let mut bf = px[2] as f32 + bright_offset;
