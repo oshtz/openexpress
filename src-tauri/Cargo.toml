@@ -29,7 +29,7 @@ image = { version = "0.25", default-features = false, features = ["jpeg", "png",
 lopdf = "0.42"
 tokio = { version = "1", features = ["full"] }
 tempfile = "3"
-ffmpeg-sidecar = "2"
+ffmpeg-sidecar = "2.7"
 thiserror = "2"
 tauri-plugin-single-instance = "2"
 vtracer = "0.6"
@@ -38,7 +38,7 @@ futures-util = "0.3"
 sha2 = "0.10"
 semver = "1"
 plist = "1.10"
-zip = { version = "4.6.1", optional = true, default-features = false, features = ["deflate"] }
+zip = { version = "9.0.5", optional = true, default-features = false, features = ["deflate"] }
 # ML stack for local AI tools. Pulls in ONNX Runtime binaries (~200 MB).
 # It is enabled by default for app builds; developers can still opt out with
 # `--no-default-features` when they need a smaller non-AI build.
